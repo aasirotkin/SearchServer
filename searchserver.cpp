@@ -2,7 +2,6 @@
 
 #include <cmath>
 #include <iostream>
-#include <algorithm>
 
 const double MAX_RELEVANCE_ACCURACY = 10e-6;
 

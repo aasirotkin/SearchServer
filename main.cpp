@@ -1,13 +1,6 @@
 #include "searchserver.h"
 
-#include <algorithm>
-#include <cassert>
-#include <cmath>
 #include <iostream>
-#include <map>
-#include <set>
-#include <string>
-#include <vector>
 
 using namespace std;
 
@@ -20,50 +13,6 @@ void RunTestImpl(Func& func, const string& func_name) {
 }
 
 #define RUN_TEST(func) RunTestImpl((func), #func)
-
-// -----------------------------------------------------------------------------
-
-template<typename T>
-ostream& operator<< (ostream& out, const vector<T>& container) {
-    out << "["s;
-    for (typename vector<T>::const_iterator i = container.begin(); i != container.end(); ++i) {
-        if (i != container.begin()) {
-            out << ", ";
-        }
-        out << *i;
-    }
-    out << "]"s;
-
-    return out;
-}
-
-template<typename T>
-ostream& operator<< (ostream& out, const set<T>& container) {
-    out << "{"s;
-    for (typename set<T>::const_iterator i = container.begin(); i != container.end(); ++i) {
-        if (i != container.begin()) {
-            out << ", ";
-        }
-        out << *i;
-    }
-    out << "}"s;
-
-    return out;
-}
-
-template<typename Key, typename Value>
-ostream& operator<< (ostream& out, const map<Key, Value>& container) {
-    out << "{"s;
-    for (typename map<Key, Value>::const_iterator i = container.begin(); i != container.end(); ++i) {
-        if (i != container.begin()) {
-            out << ", ";
-        }
-        out << i->first << ": " << i->second;
-    }
-    out << "}"s;
-
-    return out;
-}
 
 // -----------------------------------------------------------------------------
 
