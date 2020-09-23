@@ -145,11 +145,14 @@ bool SearchServer::HasMinusWord(const set<string> minus_words, const int documen
 }
 
 int SearchServer::ComputeAverageRating(const vector<int> &ratings) {
-    int rating_sum = 0;
-    for (const int rating : ratings) {
-        rating_sum += rating;
+    if (!ratings.empty()) {
+        int rating_sum = 0;
+        for (const int rating : ratings) {
+            rating_sum += rating;
+        }
+        return rating_sum / static_cast<int>(ratings.size());
     }
-    return rating_sum / static_cast<int>(ratings.size());
+    return 0;
 }
 
 SearchServer::QueryWord SearchServer::ParseQueryWord(string text) const {
