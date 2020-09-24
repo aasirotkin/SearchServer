@@ -1,6 +1,7 @@
 #include "searchserver.h"
 
 #include <iostream>
+#include <limits>
 
 using namespace std;
 
@@ -61,18 +62,20 @@ void AssertEqualImpl(const T& t, const U& u, const string& t_str, const string& 
 void TestAddDocuments() {
     const int id_actual = 42;
     const int id_banned = 61;
+    const int id_empty = 14;
     const string content = "cat in the city"s;
     const vector<int> ratings = {1, 2, 3, 4, 5};
 
     SearchServer server;
     server.AddDocument(id_actual, content, DocumentStatus::ACTUAL, ratings);
     server.AddDocument(id_banned, content, DocumentStatus::BANNED, ratings);
-    ASSERT_EQUAL(server.GetDocumentCount(), 2);
+    server.AddDocument(id_empty, ""s, DocumentStatus::ACTUAL, ratings);
+    ASSERT_EQUAL_HINT(server.GetDocumentCount(), 3, "Only 3 documents have been added"s);
 
     // Сначала убеждаемся, что документы добавлены и могут быть найдены
     const auto found_docs = server.FindTopDocuments("cat"s);
-    ASSERT_EQUAL(found_docs.size(), size_t(1));
-    ASSERT_EQUAL(found_docs.at(0).id, id_actual);
+    ASSERT_EQUAL_HINT(found_docs.size(), size_t(1), "Only one not empty document with ACTUAL status has been added"s);
+    ASSERT_EQUAL_HINT(found_docs.at(0).id, id_actual, "This is not document with ACTUAL status"s);
 
     // Убедимся, что лишние документы найдены не будут
     const auto found_empty_docs = server.FindTopDocuments("dog"s);
@@ -138,7 +141,7 @@ void TestMinusWords() {
     ASSERT_EQUAL(docs_4.at(1).id, id_2);
 }
 
-// Основная функция находится снизу, это вспомагательная
+// Основная функция находится сверху, это вспомагательная
 // данная функция может быть использована только в связке с TestMatchDocument
 // у TestMatchDocument дожены быть документы со строкой "cat in the big city"
 void TestMatchDocumentStatus(const SearchServer& server, const int id,
@@ -160,6 +163,8 @@ void TestMatchDocument() {
     SearchServer server;
     const vector<int> ratings = {1, 2, 3};
     const string content{"cat in the big city"};
+
+    ASSERT_EQUAL_HINT(server.GetDocumentCount(), 0, "The server must be empty yet"s);
 
     server.AddDocument(64, content, DocumentStatus::ACTUAL, ratings);
     server.AddDocument(12, content, DocumentStatus::BANNED, ratings);
@@ -211,23 +216,112 @@ void TestSortRelevance() {
 void TestRating() {
     const DocumentStatus status = DocumentStatus::ACTUAL;
     const string content = "cat in the city"s;
-    SearchServer server;
 
-    server.AddDocument(1, content, status, {0});
-    server.AddDocument(2, content, status, {0, 5, 10});
-    server.AddDocument(3, content, status, {-2, -1, 0});
-    server.AddDocument(4, content, status, {-5, 0, 35});
-    server.AddDocument(5, content, status, {-7, -3, -5});
-    server.AddDocument(6, content, status, {-7, -2});
-    ASSERT_EQUAL(server.GetDocumentCount(), 6);
+    { // Проверяем, что рейтинг считается правильно и документы сортируются по рейтингу при равной релевантности
+        SearchServer server;
 
-    const auto docs = server.FindTopDocuments(content, status);
-    ASSERT_EQUAL_HINT(docs.size(), size_t(5), "Maximus documents count equals to 5"s);
-    ASSERT_EQUAL_HINT(docs.at(0).rating, 10, "In this test documenst must be sorted by rating"s);
-    ASSERT_EQUAL_HINT(docs.at(1).rating, 5, "In this test documenst must be sorted by rating"s);
-    ASSERT_EQUAL_HINT(docs.at(2).rating, 0, "In this test documenst must be sorted by rating"s);
-    ASSERT_EQUAL_HINT(docs.at(3).rating, -1, "In this test documenst must be sorted by rating"s);
-    ASSERT_EQUAL_HINT(docs.at(4).rating, -4, "In this test documenst must be sorted by rating"s);
+        server.AddDocument(1, content, status, {0});
+        server.AddDocument(2, content, status, {0, 5, 10});
+        server.AddDocument(3, content, status, {-2, -1, 0});
+        server.AddDocument(4, content, status, {-5, 0, 35});
+        server.AddDocument(5, content, status, {-7, -3, -5});
+        server.AddDocument(6, content, status, {-7, -2});
+        ASSERT_EQUAL(server.GetDocumentCount(), 6);
+
+        const auto docs = server.FindTopDocuments(content, status);
+        ASSERT_EQUAL_HINT(docs.size(), size_t(5), "Maximus documents count equals to 5"s);
+        ASSERT_EQUAL_HINT(docs.at(0).rating, 10, "In this test documenst must be sorted by rating"s);
+        ASSERT_EQUAL_HINT(docs.at(1).rating, 5, "In this test documenst must be sorted by rating"s);
+        ASSERT_EQUAL_HINT(docs.at(2).rating, 0, "In this test documenst must be sorted by rating"s);
+        ASSERT_EQUAL_HINT(docs.at(3).rating, -1, "In this test documenst must be sorted by rating"s);
+        ASSERT_EQUAL_HINT(docs.at(4).rating, -4, "In this test documenst must be sorted by rating"s);
+    }
+
+    { // Проверяем, что при отсутствии рейтинга, рейтинг будет равен 0 по умолчанию
+        SearchServer server;
+
+        server.AddDocument(1, content, status, {});
+
+        const auto docs = server.FindTopDocuments(content, status);
+
+        ASSERT_EQUAL_HINT(docs.size(), size_t(1), "Only one document has been added"s);
+        ASSERT_EQUAL_HINT(docs.at(0).rating, 0, "If there is not ratings average rating must be 0"s);
+    }
+
+    { // Убедимся, что огромным количеством рейтинга Сервер не испугать
+        SearchServer server;
+        vector<int> ratings;
+        const int ratings_size = 1000;
+        for (int i = 0; i < ratings_size; ++i) {
+            ratings.push_back(i);
+        }
+        const int average = (ratings.front() + ratings.back()) / 2;
+
+        server.AddDocument(1, content, status, ratings);
+
+        const auto docs = server.FindTopDocuments(content, status);
+
+        ASSERT_EQUAL_HINT(docs.size(), size_t(1), "Only one document has been added"s);
+        ASSERT_EQUAL_HINT(docs.at(0).rating, average, "Server has been defeated by huge amount of ratings"s);
+    }
+
+    { // Проверяем поведение для экстремально больших чисел рейтинга
+        SearchServer server;
+        const int halh_max = 0.5 * numeric_limits<int>::max();
+        const int quarter_max = 0.5 * halh_max;
+        const int average = quarter_max + 1;
+        // q = quarter_max
+        // 2q = halh_max
+
+        vector<int> ratings_1 = {halh_max, quarter_max, quarter_max, quarter_max, 5};
+        // (2q + q + q + q + 5) / 5 = q + 1
+
+        vector<int> ratings_2 = {halh_max, quarter_max, quarter_max, 5, quarter_max};
+        // (2q + q + q + 5 + q) / 5 = q + 1
+
+        vector<int> ratings_3 = {5, halh_max, quarter_max, quarter_max, quarter_max};
+        // (5 + 2q + q + q + q) / 5 = q + 1
+
+        server.AddDocument(1, content, status, ratings_1);
+        server.AddDocument(2, content, status, ratings_2);
+        server.AddDocument(3, content, status, ratings_3);
+
+        const auto docs = server.FindTopDocuments(content, status);
+
+        ASSERT_EQUAL_HINT(docs.size(), size_t(3), "Only three documents have been added"s);
+        ASSERT_EQUAL_HINT(docs.at(0).rating, average, "Overflow has been occured"s);
+        ASSERT_EQUAL_HINT(docs.at(1).rating, average, "Overflow has been occured"s);
+        ASSERT_EQUAL_HINT(docs.at(2).rating, average, "Overflow has been occured"s);
+    }
+
+    { // Проверяем поведение для экстремально маленьких чисел рейтинга
+        SearchServer server;
+        const int halh_min = 0.5 * numeric_limits<int>::min();
+        const int quarter_min = 0.5 * halh_min;
+        const int average = quarter_min + 1;
+        // q = quarter_min
+        // 2q = halh_min
+
+        vector<int> ratings_1 = {halh_min, quarter_min, quarter_min, quarter_min, 5};
+        // (2q + q + q + q + 5) / 5 = q + 1
+
+        vector<int> ratings_2 = {halh_min, quarter_min, quarter_min, 5, quarter_min};
+        // (2q + q + q + 5 + q) / 5 = q + 1
+
+        vector<int> ratings_3 = {5, halh_min, quarter_min, quarter_min, quarter_min};
+        // (5 + 2q + q + q + q) / 5 = q + 1
+
+        server.AddDocument(1, content, status, ratings_1);
+        server.AddDocument(2, content, status, ratings_2);
+        server.AddDocument(3, content, status, ratings_3);
+
+        const auto docs = server.FindTopDocuments(content, status);
+
+        ASSERT_EQUAL_HINT(docs.size(), size_t(3), "Only three documents have been added"s);
+        ASSERT_EQUAL_HINT(docs.at(0).rating, average, "Underflow has been occured"s);
+        ASSERT_EQUAL_HINT(docs.at(1).rating, average, "Underflow has been occured"s);
+        ASSERT_EQUAL_HINT(docs.at(2).rating, average, "Underflow has been occured"s);
+    }
 }
 
 // Фильтрация с использованием предиката
