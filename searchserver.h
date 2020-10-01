@@ -12,9 +12,16 @@ using namespace std;
 /* -------------------------------------------------------------------------- */
 
 struct Document {
-    int id;
-    double relevance;
-    int rating;
+    int id = 0;
+    double relevance = 0.0;
+    int rating = 0;
+
+    Document() = default;
+
+    Document(int input_id, double input_relevance, int input_rating) :
+        id(input_id),
+        relevance(input_relevance),
+        rating(input_rating) {}
 
     void Print() const;
 
@@ -44,7 +51,24 @@ struct DocumentData
 
 class SearchServer {
 public:
+    SearchServer() = default;
+
+    SearchServer(const string& stop_words) {
+        SetStopWords(stop_words);
+    }
+
+    template<typename StopWordsCollection>
+    explicit SearchServer(const StopWordsCollection& stop_words) {
+        for (auto word : stop_words) {
+            if (!word.empty()) {
+                stop_words_.insert(word);
+            }
+        }
+    }
+
     void SetStopWords(const string& text);
+
+    string GetStopWords() const;
 
     int GetDocumentCount() const;
 

@@ -82,6 +82,28 @@ void TestAddDocuments() {
     ASSERT_HINT(found_empty_docs.empty(), "There is not document with dog word"s);
 }
 
+// Тест проверяет, что стоп слова правильно добавляются
+void TestStopWords() {
+    { // Проверяем, что стоп слова не дублируются
+        SearchServer server("in at in the"s);
+        ASSERT_EQUAL(server.GetStopWords(), "at in the"s);
+    }
+    { // Проверяем, что лишние пробелы в стоп словах не обрабатываются
+        SearchServer server("       in    at    the      "s);
+        ASSERT_EQUAL(server.GetStopWords(), "at in the"s);
+    }
+    { // Проверяем, как считываюся стоп слова из vector
+        vector<string> stop_words = {"in"s, "at"s, "the"s, "in"s, "the"s};
+        SearchServer server(stop_words);
+        ASSERT_EQUAL(server.GetStopWords(), "at in the"s);
+    }
+    { // Проверяем, как считываюся стоп слова из set
+        set<string> stop_words = {"in"s, "at"s, "the"s, "in"s, "the"s};
+        SearchServer server(stop_words);
+        ASSERT_EQUAL(server.GetStopWords(), "at in the"s);
+    }
+}
+
 // Тест проверяет, что поисковая система исключает стоп-слова при добавлении документов
 void TestExcludeStopWordsFromAddedDocumentContent() {
     const int doc_id = 42;
@@ -455,6 +477,7 @@ void TestRelevanceValue() {
 // Функция TestSearchServer является точкой входа для запуска тестов
 void TestSearchServer() {
     RUN_TEST(TestAddDocuments);
+    RUN_TEST(TestStopWords);
     RUN_TEST(TestExcludeStopWordsFromAddedDocumentContent);
     RUN_TEST(TestMinusWords);
     RUN_TEST(TestMatchDocument);

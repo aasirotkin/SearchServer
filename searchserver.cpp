@@ -52,6 +52,8 @@ vector<string> SplitIntoWords(const string& text) {
     }
     words.push_back(word);
 
+    words.erase(remove(words.begin(), words.end(), ""s), words.end());
+
     return words;
 }
 
@@ -81,6 +83,18 @@ void SearchServer::SetStopWords(const string &text) {
     for (const string& word : SplitIntoWords(text)) {
         stop_words_.insert(word);
     }
+}
+
+string SearchServer::GetStopWords() const
+{
+    string stop_words;
+    for (auto i = stop_words_.begin(); i != stop_words_.end(); ++i) {
+        if (i != stop_words_.begin()) {
+            stop_words += " "s;
+        }
+        stop_words += *i;
+    }
+    return stop_words;
 }
 
 int SearchServer::GetDocumentCount() const {
