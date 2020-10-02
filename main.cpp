@@ -72,14 +72,18 @@ void TestAddDocuments() {
     (void)server.AddDocument(id_empty, ""s, DocumentStatus::ACTUAL, ratings);
     ASSERT_EQUAL_HINT(server.GetDocumentCount(), 3, "Only 2 documents have been added"s);
 
-    // Сначала убеждаемся, что документы добавлены и могут быть найдены
-    const auto found_docs = server.FindTopDocuments("cat"s);
-    ASSERT_EQUAL_HINT(found_docs.size(), size_t(1), "Only one not empty document with ACTUAL status has been added"s);
-    ASSERT_EQUAL_HINT(found_docs.at(0).id, id_actual, "This is not document with ACTUAL status"s);
+    { // Сначала убеждаемся, что документы добавлены и могут быть найдены
+        vector<Document> found_docs;
+        ASSERT(server.FindTopDocuments("cat"s, found_docs) == true);
+        ASSERT_EQUAL_HINT(found_docs.size(), size_t(1), "Only one not empty document with ACTUAL status has been added"s);
+        ASSERT_EQUAL_HINT(found_docs.at(0).id, id_actual, "This is not document with ACTUAL status"s);
+    }
 
-    // Убедимся, что лишние документы найдены не будут
-    const auto found_empty_docs = server.FindTopDocuments("dog"s);
-    ASSERT_HINT(found_empty_docs.empty(), "There is not document with dog word"s);
+    { // Убедимся, что лишние документы найдены не будут
+        vector<Document> found_docs;
+        ASSERT(server.FindTopDocuments("dog"s, found_docs) == true);
+        ASSERT_HINT(found_docs.empty(), "There is not document with dog word"s);
+    }
 }
 
 // Дополнительные тесты на отсеивание неправильных id и спецслов
@@ -90,6 +94,37 @@ void TestAddDocumentsSpecialWordsAndWrongId() {
     ASSERT(server.AddDocument(0, "cat in the city"s, DocumentStatus::ACTUAL, {0}) == false);
     ASSERT(server.AddDocument(1, "cat in the ci\x12ty"s, DocumentStatus::ACTUAL, {0}) == false);
     ASSERT_EQUAL(server.GetDocumentCount(), 1);
+}
+
+// Дополнительные тесты на отсеивание в случае наличия неправильных минус слов или спецслов в методе FindTopDocuments
+void TestFindTopDocumentsWrongQuery() {
+    SearchServer server;
+    void(server.AddDocument(0, "cat in the city"s, DocumentStatus::ACTUAL, {0}));
+    void(server.AddDocument(1, "dog in the town"s, DocumentStatus::ACTUAL, {0}));
+
+    { // Проверяем, что если минус слово содержит лишний минус, то ничего не будет найдено
+        vector<Document> docs;
+        ASSERT(server.FindTopDocuments("cat --city"s, docs) == false);
+        ASSERT(docs.empty());
+    }
+
+    { // Проверяем, что если после знака минус ничего нет, то ничего не будет найдено
+        vector<Document> docs;
+        ASSERT(server.FindTopDocuments("cat -"s, docs) == false);
+        ASSERT(docs.empty());
+    }
+
+    { // Проверяем, что если знак минус написан между словами, то документ найден будет
+        vector<Document> docs;
+        ASSERT(server.FindTopDocuments("cat in-the city"s, docs) == true);
+        ASSERT(docs.size() == size_t(1));
+    }
+
+    { // Проверяем, что если есть спец слово, то ничего не будет найдено
+        vector<Document> docs;
+        ASSERT(server.FindTopDocuments("cat \x12"s, docs) == false);
+        ASSERT(docs.empty());
+    }
 }
 
 // Тест проверяет, что стоп слова правильно добавляются
@@ -124,7 +159,8 @@ void TestExcludeStopWordsFromAddedDocumentContent() {
     {
         SearchServer server;
         (void)server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
-        const auto found_docs = server.FindTopDocuments("in"s);
+        vector<Document> found_docs;
+        ASSERT(server.FindTopDocuments("in"s, found_docs) == true);
         ASSERT_EQUAL(found_docs.size(), size_t(1));
         const Document& doc0 = found_docs[0];
         ASSERT_EQUAL(doc0.id, doc_id);
@@ -134,8 +170,10 @@ void TestExcludeStopWordsFromAddedDocumentContent() {
     // возвращает пустой результат
     {
         SearchServer server("in the"s);
-        (void)server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
-        ASSERT_HINT(server.FindTopDocuments("in"s).empty(), "Stop words must be excluded from documents"s);
+        ASSERT(server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings) == true);
+        vector<Document> found_docs;
+        ASSERT(server.FindTopDocuments("in"s, found_docs) == true);
+        ASSERT_HINT(found_docs.empty(), "Stop words must be excluded from documents"s);
     }
 }
 
@@ -152,21 +190,25 @@ void TestMinusWords() {
     ASSERT_EQUAL(server.GetDocumentCount(), 2);
 
     // Убедимся, что минус слово отсекает второй документ
-    vector<Document> docs_1 = server.FindTopDocuments("cat or dog in the -garden -"s);
+    vector<Document> docs_1;
+    ASSERT(server.FindTopDocuments("cat or dog in the -garden"s, docs_1) == true);
     ASSERT_EQUAL(docs_1.size(), size_t(1));
     ASSERT_EQUAL(docs_1.at(0).id, id_1);
 
     // Убедимся, что минус слово отсекает первый документ
-    vector<Document> docs_2 = server.FindTopDocuments("cat or dog in the -city"s);
+    vector<Document> docs_2;
+    ASSERT(server.FindTopDocuments("cat or dog in the -city"s, docs_2) == true);
     ASSERT_EQUAL(docs_2.size(), size_t(1));
     ASSERT_EQUAL(docs_2.at(0).id, id_2);
 
     // Убедимся, что минус слово работает для обоих документов
-    vector<Document> docs_3 = server.FindTopDocuments("rat -in the space"s);
+    vector<Document> docs_3;
+    ASSERT(server.FindTopDocuments("rat -in the space"s, docs_3) == true);
     ASSERT_HINT(docs_3.empty(), "Documents with minus words must be excluded"s);
 
     // Убедимся, что минус слово которого нет в обоих документах не повлияет на результат
-    vector<Document> docs_4 = server.FindTopDocuments("-rat in the space"s);
+    vector<Document> docs_4;
+    ASSERT(server.FindTopDocuments("-rat in the space"s, docs_4) == true);
     ASSERT_EQUAL(docs_4.size(), size_t(2));
     ASSERT_EQUAL(docs_4.at(0).id, id_1);
     ASSERT_EQUAL(docs_4.at(1).id, id_2);
@@ -275,7 +317,8 @@ void TestSortRelevance() {
     (void)server.AddDocument(2, "huge fat parrot"s, status, rating);
     (void)server.AddDocument(1, "removed cat"s, status, rating);
 
-    const auto docs = server.FindTopDocuments(query);
+    vector<Document> docs;
+    ASSERT(server.FindTopDocuments(query, docs) == true);
     for (size_t i = 0; i + 1 < docs.size(); ++i) {
         ASSERT_HINT(MoreThan(docs.at(i).relevance, docs.at(i + 1).relevance, delta) ||
                     InTheVicinity(docs.at(i).relevance, docs.at(i + 1).relevance, delta),
@@ -299,7 +342,8 @@ void TestRating() {
         (void)server.AddDocument(6, content, status, {-7, -2});
         ASSERT_EQUAL(server.GetDocumentCount(), 6);
 
-        const auto docs = server.FindTopDocuments(content, status);
+        vector<Document> docs;
+        ASSERT(server.FindTopDocuments(content, status, docs) == true);
         ASSERT_EQUAL_HINT(docs.size(), size_t(5), "Maximus documents count equals to 5"s);
         ASSERT_EQUAL_HINT(docs.at(0).rating, 10, "In this test documenst must be sorted by rating"s);
         ASSERT_EQUAL_HINT(docs.at(1).rating, 5, "In this test documenst must be sorted by rating"s);
@@ -311,9 +355,10 @@ void TestRating() {
     { // Проверяем, что при отсутствии рейтинга, рейтинг будет равен 0 по умолчанию
         SearchServer server;
 
-        (void)server.AddDocument(1, content, status, {});
+        ASSERT(server.AddDocument(1, content, status, {}) == true);
 
-        const auto docs = server.FindTopDocuments(content, status);
+        vector<Document> docs;
+        ASSERT(server.FindTopDocuments(content, status, docs) == true);
 
         ASSERT_EQUAL_HINT(docs.size(), size_t(1), "Only one document has been added"s);
         ASSERT_EQUAL_HINT(docs.at(0).rating, 0, "If there is not ratings average rating must be 0"s);
@@ -330,7 +375,8 @@ void TestRating() {
 
         (void)server.AddDocument(1, content, status, ratings);
 
-        const auto docs = server.FindTopDocuments(content, status);
+        vector<Document> docs;
+        ASSERT(server.FindTopDocuments(content, status, docs) == true);
 
         ASSERT_EQUAL_HINT(docs.size(), size_t(1), "Only one document has been added"s);
         ASSERT_EQUAL_HINT(docs.at(0).rating, average, "Server has been defeated by huge amount of ratings"s);
@@ -357,7 +403,8 @@ void TestRating() {
         (void)server.AddDocument(2, content, status, ratings_2);
         (void)server.AddDocument(3, content, status, ratings_3);
 
-        const auto docs = server.FindTopDocuments(content, status);
+        vector<Document> docs;
+        ASSERT(server.FindTopDocuments(content, status, docs) == true);
 
         ASSERT_EQUAL_HINT(docs.size(), size_t(3), "Only three documents have been added"s);
         ASSERT_EQUAL_HINT(docs.at(0).rating, average, "Overflow has been occured"s);
@@ -386,7 +433,8 @@ void TestRating() {
         (void)server.AddDocument(2, content, status, ratings_2);
         (void)server.AddDocument(3, content, status, ratings_3);
 
-        const auto docs = server.FindTopDocuments(content, status);
+        vector<Document> docs;
+        ASSERT(server.FindTopDocuments(content, status, docs) == true);
 
         ASSERT_EQUAL_HINT(docs.size(), size_t(3), "Only three documents have been added"s);
         ASSERT_EQUAL_HINT(docs.at(0).rating, average, "Underflow has been occured"s);
@@ -407,24 +455,27 @@ void TestFilterPredicate() {
     ASSERT_EQUAL(server.GetDocumentCount(), 3);
 
     { // Проверяем что можно найти только документы с четным id
-        const vector<Document> docs = server.FindTopDocuments(content,
+        vector<Document> docs;
+        ASSERT(server.FindTopDocuments(content,
             [](int document_id, DocumentStatus st, int rating) {
-                (void)st; (void)rating; return document_id % 2 == 0;});
+                (void)st; (void)rating; return document_id % 2 == 0;}, docs) == true);
         ASSERT_EQUAL_HINT(docs.size(), size_t(1), "There is the only one document with even id"s);
         ASSERT_EQUAL_HINT(docs.at(0).id, 2, "It is not even id"s);
     }
 
     { // Проверяем что можно ничего не найти!
-        const vector<Document> docs = server.FindTopDocuments(content,
+        vector<Document> docs;
+        ASSERT(server.FindTopDocuments(content,
             [](int document_id, DocumentStatus st, int rating) {
-                (void)document_id; (void)st; (void)rating; return false;});
+                (void)document_id; (void)st; (void)rating; return false;}, docs) == true);
         ASSERT_HINT(docs.empty(), "How could you find something with this predicate? It must be empty"s);
     }
 
     { // Проверяем что можно найти только документы с положительным рейтингом
-        const vector<Document> docs = server.FindTopDocuments(content,
+        vector<Document> docs;
+        ASSERT(server.FindTopDocuments(content,
             [](int document_id, DocumentStatus st, int rating) {
-                (void)document_id; (void)st; return rating > 0;});
+                (void)document_id; (void)st; return rating > 0;}, docs) == true);
         ASSERT_EQUAL_HINT(docs.size(), size_t(2), "There is only two documents with positive rating"s);
         // Предполагается, что релевантности равны, то есть сортировка осуществляется по рейтингу
         ASSERT_EQUAL_HINT(docs.at(0).id, 2, "Documents must be sorted by rating"s);
@@ -438,7 +489,8 @@ void TestDocumentsWithStatusProcess(const SearchServer& server,
                                     const int id,
                                     const DocumentStatus status,
                                     const string& hint) {
-    const auto docs = server.FindTopDocuments(content, status);
+    vector<Document> docs;
+    ASSERT(server.FindTopDocuments(content, status, docs) == true);
     ASSERT_EQUAL_HINT(docs.size(), size_t(1), hint);
     ASSERT_EQUAL_HINT(docs.at(0).id, id, hint);
 }
@@ -453,7 +505,8 @@ void TestDocumentsWithStatus() {
     (void)server.AddDocument(31, content, DocumentStatus::IRRELEVANT, {-2, -1, 0});
 
     // Проверяем, что ничего не будет найдено по несуществующему статусу
-    const auto status_does_not_exist = server.FindTopDocuments(content, DocumentStatus::REMOVED);
+    vector<Document> status_does_not_exist;
+    ASSERT(server.FindTopDocuments(content, DocumentStatus::REMOVED, status_does_not_exist) == true);
     ASSERT_HINT(status_does_not_exist.empty(), "REMOVED status hasn't been added yet"s);
 
     (void)server.AddDocument(41, content, DocumentStatus::REMOVED, {-7, -3, -5});
@@ -503,7 +556,8 @@ void TestRelevanceValue() {
     //6 - 0 = 0
     ASSERT_EQUAL_HINT(server.GetDocumentCount(), 6, "Only 6 documents have been added"s);
 
-    const auto docs = server.FindTopDocuments(query, status);
+    vector<Document> docs;
+    ASSERT(server.FindTopDocuments(query, status, docs) == true);
     ASSERT_EQUAL_HINT(docs.size(), size_t(4), "Not all of the documents have words from the query"s);
 
     ASSERT(InTheVicinity(docs.at(0).relevance, 0.3465735, delta));
@@ -538,6 +592,7 @@ void TestGetDocumentId() {
 void TestSearchServer() {
     RUN_TEST(TestAddDocuments);
     RUN_TEST(TestAddDocumentsSpecialWordsAndWrongId);
+    RUN_TEST(TestFindTopDocumentsWrongQuery);
     RUN_TEST(TestStopWords);
     RUN_TEST(TestExcludeStopWordsFromAddedDocumentContent);
     RUN_TEST(TestMinusWords);

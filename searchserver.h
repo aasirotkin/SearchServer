@@ -75,35 +75,41 @@ public:
     int GetDocumentCount() const;
 
     [[nodiscard]] bool MatchDocument(const string& raw_query, int document_id,
-                                     tuple<vector<string>, DocumentStatus> &result) const;
+                                     tuple<vector<string>, DocumentStatus>& result) const;
 
     [[nodiscard]] bool AddDocument(int document_id, const string& document, DocumentStatus status, const vector<int>& ratings);
 
     template<typename KeyMapper>
-    vector<Document> FindTopDocuments(const string& raw_query, const KeyMapper& mapper) const {
-        const Query query = ParseQuery(raw_query);
-        vector<Document> matched_documents = FindAllDocuments(query);
+    [[nodiscard]] bool FindTopDocuments(const string& raw_query, const KeyMapper& mapper,
+                                        vector<Document>& result) const {
+        Query query;
+        if (!ParseQuery(raw_query, query)) {
+            return false;
+        }
+        result = FindAllDocuments(query);
 
-        sort(matched_documents.begin(), matched_documents.end(),
+        sort(result.begin(), result.end(),
              [](const Document& lhs, const Document& rhs) {
             return Document::CompareRelevance(lhs, rhs);
         });
 
-        matched_documents.erase(
-                    remove_if(matched_documents.begin(), matched_documents.end(),
+        result.erase(
+                    remove_if(result.begin(), result.end(),
                               [this, &mapper](const Document& doc) {
             return !mapper(doc.id, document_data_.at(doc.id).status, document_data_.at(doc.id).rating); }),
-                    matched_documents.end());
+                    result.end());
 
-        if (matched_documents.size() > max_result_document_count_) {
-            matched_documents.resize(max_result_document_count_);
+        if (result.size() > max_result_document_count_) {
+            result.resize(max_result_document_count_);
         }
-        return matched_documents;
+        return true;
     }
 
-    vector<Document> FindTopDocuments(const string& raw_query, const DocumentStatus& status) const;
+    [[nodiscard]] bool FindTopDocuments(const string& raw_query, const DocumentStatus& status,
+                                        vector<Document>& result) const;
 
-    vector<Document> FindTopDocuments(const string& raw_query) const;
+    [[nodiscard]] bool FindTopDocuments(const string& raw_query,
+                                        vector<Document>& result) const;
 
     int GetDocumentId(int index) const;
 
@@ -137,9 +143,7 @@ private:
 
     QueryWord ParseQueryWord(string text) const;
 
-    Query ParseQuery(const string& text, const bool all_words = false) const;
-
-    [[nodiscard]] bool ParseQuery(const string& text, Query &query,
+    [[nodiscard]] bool ParseQuery(const string& text, Query& query,
                                   const bool all_words = false) const;
 
     // Existence required

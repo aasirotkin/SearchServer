@@ -102,7 +102,7 @@ int SearchServer::GetDocumentCount() const {
 }
 
 bool SearchServer::MatchDocument(const string &raw_query, int document_id,
-                                 tuple<vector<string>, DocumentStatus> &result) const {
+                                 tuple<vector<string>, DocumentStatus>& result) const {
     Query query;
     if (!ParseQuery(raw_query, query, true)) {
         return false;
@@ -149,13 +149,16 @@ bool SearchServer::AddDocument(int document_id, const string &document, Document
     return true;
 }
 
-vector<Document> SearchServer::FindTopDocuments(const string &raw_query, const DocumentStatus &status) const {
+bool SearchServer::FindTopDocuments(const string &raw_query, const DocumentStatus &status,
+                                                vector<Document>& result) const {
     return FindTopDocuments(raw_query,
-    [&status](int document_id, DocumentStatus st, int rating) { (void)document_id; (void)rating; return status == st; });
+    [&status](int document_id, DocumentStatus st, int rating) { (void)document_id; (void)rating; return status == st; },
+    result);
 }
 
-vector<Document> SearchServer::FindTopDocuments(const string &raw_query) const {
-    return FindTopDocuments(raw_query, DocumentStatus::ACTUAL);
+bool SearchServer::FindTopDocuments(const string &raw_query,
+                                                vector<Document>& result) const {
+    return FindTopDocuments(raw_query, DocumentStatus::ACTUAL, result);
 }
 
 int SearchServer::GetDocumentId(int index) const
@@ -206,22 +209,7 @@ SearchServer::QueryWord SearchServer::ParseQueryWord(string text) const {
     return {text, is_minus, IsStopWord(text)};
 }
 
-SearchServer::Query SearchServer::ParseQuery(const string &text, const bool all_words) const {
-    Query query;
-    for (const string& word : SplitIntoWords(text)) {
-        const QueryWord query_word = ParseQueryWord(word);
-        if (!query_word.is_stop || all_words) {
-            if (query_word.is_minus) {
-                query.minus_words.insert(query_word.data);
-            } else {
-                query.plus_words.insert(query_word.data);
-            }
-        }
-    }
-    return query;
-}
-
-bool SearchServer::ParseQuery(const string &text, SearchServer::Query &query,
+bool SearchServer::ParseQuery(const string &text, SearchServer::Query& query,
                               const bool all_words) const
 {
     for (const string& word : SplitIntoWords(text)) {
