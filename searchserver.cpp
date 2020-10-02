@@ -152,6 +152,16 @@ vector<Document> SearchServer::FindTopDocuments(const string &raw_query) const {
     return FindTopDocuments(raw_query, DocumentStatus::ACTUAL);
 }
 
+int SearchServer::GetDocumentId(int index) const
+{
+    if (index < 0 || index >= document_count_) {
+        return INVALID_DOCUMENT_ID;
+    }
+    auto it = document_data_.begin();
+    advance(it, index);
+    return it->first;
+}
+
 vector<string> SearchServer::SplitIntoWordsNoStop(const string &text) const {
     vector<string> words = SplitIntoWords(text);
     words.erase(remove_if(words.begin(), words.end(),

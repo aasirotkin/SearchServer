@@ -104,6 +104,8 @@ public:
 
     vector<Document> FindTopDocuments(const string& raw_query) const;
 
+    int GetDocumentId(int index) const;
+
 private:
     struct QueryWord {
         string data;

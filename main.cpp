@@ -133,8 +133,7 @@ void TestExcludeStopWordsFromAddedDocumentContent() {
     // Затем убеждаемся, что поиск этого же слова, входящего в список стоп-слов,
     // возвращает пустой результат
     {
-        SearchServer server;
-        server.SetStopWords("in the"s);
+        SearchServer server("in the"s);
         (void)server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
         ASSERT_HINT(server.FindTopDocuments("in"s).empty(), "Stop words must be excluded from documents"s);
     }
@@ -407,9 +406,7 @@ void TestDocumentsWithStatusProcess(const SearchServer& server,
 // Поиск документа с заданным статусом
 void TestDocumentsWithStatus() {
     const string content{"kind cat with long tail"};
-    SearchServer server;
-
-    server.SetStopWords("with");
+    SearchServer server("with"s);
 
     (void)server.AddDocument(11, content, DocumentStatus::ACTUAL, {0, 5, 10});
     (void)server.AddDocument(21, content, DocumentStatus::BANNED, {-5, 0, 35});
@@ -435,11 +432,9 @@ void TestRelevanceValue() {
     const vector<int> rating_2{1, 2, 3};
     const DocumentStatus status = DocumentStatus::ACTUAL;
     const string query{"kind cat with long tail"s};
-    SearchServer server;
+    SearchServer server("with"s);
 
-    server.SetStopWords("with");
-
-    (void)server.AddDocument(5, "human tail", status, rating_1);
+    (void)server.AddDocument(5, "human tail"s, status, rating_1);
     //tail 1/2
     (void)server.AddDocument(2, "old angry fat dog with short tail"s, status, rating_1);
     //tail tf = 1/6
@@ -484,6 +479,21 @@ void TestRelevanceValue() {
     ASSERT_EQUAL(docs.at(3).id, 2);
 }
 
+// Проверка метода возврата id номера
+void TestGetDocumentId() {
+    SearchServer server;
+    (void)server.AddDocument(0, "cat in the city"s, DocumentStatus::ACTUAL, {0});
+    (void)server.AddDocument(1, "cat in the city"s, DocumentStatus::ACTUAL, {0});
+    (void)server.AddDocument(2, "cat in the city"s, DocumentStatus::ACTUAL, {0});
+    (void)server.AddDocument(3, "cat in the city"s, DocumentStatus::ACTUAL, {0});
+    (void)server.AddDocument(4, "cat in the city"s, DocumentStatus::ACTUAL, {0});
+    (void)server.AddDocument(5, "cat in the city"s, DocumentStatus::ACTUAL, {0});
+    ASSERT_EQUAL(server.GetDocumentId(-1), SearchServer::INVALID_DOCUMENT_ID);
+    ASSERT_EQUAL(server.GetDocumentId(6), SearchServer::INVALID_DOCUMENT_ID);
+    ASSERT_EQUAL(server.GetDocumentId(10), SearchServer::INVALID_DOCUMENT_ID);
+    ASSERT(server.GetDocumentId(4) > 0);
+}
+
 // Функция TestSearchServer является точкой входа для запуска тестов
 void TestSearchServer() {
     RUN_TEST(TestAddDocuments);
@@ -497,6 +507,7 @@ void TestSearchServer() {
     RUN_TEST(TestFilterPredicate);
     RUN_TEST(TestDocumentsWithStatus);
     RUN_TEST(TestRelevanceValue);
+    RUN_TEST(TestGetDocumentId);
 }
 
 // --------- Окончание модульных тестов поисковой системы -----------
