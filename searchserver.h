@@ -51,6 +51,8 @@ struct DocumentData
 
 class SearchServer {
 public:
+    inline static constexpr int INVALID_DOCUMENT_ID = -1;
+
     SearchServer() = default;
 
     SearchServer(const string& stop_words) {
@@ -74,7 +76,7 @@ public:
 
     tuple<vector<string>, DocumentStatus> MatchDocument(const string& raw_query, int document_id) const;
 
-    void AddDocument(int document_id, const string& document, DocumentStatus status, const vector<int>& ratings);
+    [[nodiscard]] bool AddDocument(int document_id, const string& document, DocumentStatus status, const vector<int>& ratings);
 
     template<typename KeyMapper>
     vector<Document> FindTopDocuments(const string& raw_query, const KeyMapper& mapper) const {
@@ -138,6 +140,8 @@ private:
     double ComputeWordInverseDocumentFreq(const string& word) const;
 
     vector<Document> FindAllDocuments(const Query& query) const;
+
+    static bool IsValidWord(const string& word);
 };
 
 #endif // SEARCHSERVER_H

@@ -67,10 +67,10 @@ void TestAddDocuments() {
     const vector<int> ratings = {1, 2, 3, 4, 5};
 
     SearchServer server;
-    server.AddDocument(id_actual, content, DocumentStatus::ACTUAL, ratings);
-    server.AddDocument(id_banned, content, DocumentStatus::BANNED, ratings);
-    server.AddDocument(id_empty, ""s, DocumentStatus::ACTUAL, ratings);
-    ASSERT_EQUAL_HINT(server.GetDocumentCount(), 3, "Only 3 documents have been added"s);
+    (void)server.AddDocument(id_actual, content, DocumentStatus::ACTUAL, ratings);
+    (void)server.AddDocument(id_banned, content, DocumentStatus::BANNED, ratings);
+    (void)server.AddDocument(id_empty, ""s, DocumentStatus::ACTUAL, ratings);
+    ASSERT_EQUAL_HINT(server.GetDocumentCount(), 3, "Only 2 documents have been added"s);
 
     // Сначала убеждаемся, что документы добавлены и могут быть найдены
     const auto found_docs = server.FindTopDocuments("cat"s);
@@ -80,6 +80,16 @@ void TestAddDocuments() {
     // Убедимся, что лишние документы найдены не будут
     const auto found_empty_docs = server.FindTopDocuments("dog"s);
     ASSERT_HINT(found_empty_docs.empty(), "There is not document with dog word"s);
+}
+
+// Дополнительные тесты на отсеивание неправильных id и спецслов
+void TestAddDocumentsSpecialWordsAndWrongId() {
+    SearchServer server;
+    ASSERT(server.AddDocument(-1, "cat in the city"s, DocumentStatus::ACTUAL, {0}) == false);
+    ASSERT(server.AddDocument(0, "cat in the city"s, DocumentStatus::ACTUAL, {0}) == true);
+    ASSERT(server.AddDocument(0, "cat in the city"s, DocumentStatus::ACTUAL, {0}) == false);
+    ASSERT(server.AddDocument(1, "cat in the ci\x12ty"s, DocumentStatus::ACTUAL, {0}) == false);
+    ASSERT_EQUAL(server.GetDocumentCount(), 1);
 }
 
 // Тест проверяет, что стоп слова правильно добавляются
@@ -113,7 +123,7 @@ void TestExcludeStopWordsFromAddedDocumentContent() {
     // находит нужный документ
     {
         SearchServer server;
-        server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
+        (void)server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
         const auto found_docs = server.FindTopDocuments("in"s);
         ASSERT_EQUAL(found_docs.size(), size_t(1));
         const Document& doc0 = found_docs[0];
@@ -125,7 +135,7 @@ void TestExcludeStopWordsFromAddedDocumentContent() {
     {
         SearchServer server;
         server.SetStopWords("in the"s);
-        server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
+        (void)server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
         ASSERT_HINT(server.FindTopDocuments("in"s).empty(), "Stop words must be excluded from documents"s);
     }
 }
@@ -138,12 +148,12 @@ void TestMinusWords() {
     const DocumentStatus status = DocumentStatus::ACTUAL;
     const vector<int> ratings = {1, 2, 3};
 
-    server.AddDocument(id_1, "cat in the city"s, status, ratings);
-    server.AddDocument(id_2, "dog in the garden"s, status, ratings);
+    (void)server.AddDocument(id_1, "cat in the city"s, status, ratings);
+    (void)server.AddDocument(id_2, "dog in the garden"s, status, ratings);
     ASSERT_EQUAL(server.GetDocumentCount(), 2);
 
     // Убедимся, что минус слово отсекает второй документ
-    vector<Document> docs_1 = server.FindTopDocuments("cat or dog in the -garden"s);
+    vector<Document> docs_1 = server.FindTopDocuments("cat or dog in the -garden -"s);
     ASSERT_EQUAL(docs_1.size(), size_t(1));
     ASSERT_EQUAL(docs_1.at(0).id, id_1);
 
@@ -188,10 +198,10 @@ void TestMatchDocument() {
 
     ASSERT_EQUAL_HINT(server.GetDocumentCount(), 0, "The server must be empty yet"s);
 
-    server.AddDocument(64, content, DocumentStatus::ACTUAL, ratings);
-    server.AddDocument(12, content, DocumentStatus::BANNED, ratings);
-    server.AddDocument(51, content, DocumentStatus::IRRELEVANT, ratings);
-    server.AddDocument(75, content, DocumentStatus::REMOVED, ratings);
+    (void)server.AddDocument(64, content, DocumentStatus::ACTUAL, ratings);
+    (void)server.AddDocument(12, content, DocumentStatus::BANNED, ratings);
+    (void)server.AddDocument(51, content, DocumentStatus::IRRELEVANT, ratings);
+    (void)server.AddDocument(75, content, DocumentStatus::REMOVED, ratings);
 
     ASSERT_EQUAL(server.GetDocumentCount(), 4);
 
@@ -219,12 +229,12 @@ void TestSortRelevance() {
     const string query{"kind cat with long tail"s};
     SearchServer server;
 
-    server.AddDocument(6, "human tail"s, status, rating);
-    server.AddDocument(5, "old angry fat dog with short tail"s, status, rating);
-    server.AddDocument(4, "nasty cat beautiful tail"s, status, rating);
-    server.AddDocument(3, "not beautiful cat"s, status, rating);
-    server.AddDocument(2, "huge fat parrot"s, status, rating);
-    server.AddDocument(1, "removed cat"s, status, rating);
+    (void)server.AddDocument(6, "human tail"s, status, rating);
+    (void)server.AddDocument(5, "old angry fat dog with short tail"s, status, rating);
+    (void)server.AddDocument(4, "nasty cat beautiful tail"s, status, rating);
+    (void)server.AddDocument(3, "not beautiful cat"s, status, rating);
+    (void)server.AddDocument(2, "huge fat parrot"s, status, rating);
+    (void)server.AddDocument(1, "removed cat"s, status, rating);
 
     const auto docs = server.FindTopDocuments(query);
     for (size_t i = 0; i + 1 < docs.size(); ++i) {
@@ -242,12 +252,12 @@ void TestRating() {
     { // Проверяем, что рейтинг считается правильно и документы сортируются по рейтингу при равной релевантности
         SearchServer server;
 
-        server.AddDocument(1, content, status, {0});
-        server.AddDocument(2, content, status, {0, 5, 10});
-        server.AddDocument(3, content, status, {-2, -1, 0});
-        server.AddDocument(4, content, status, {-5, 0, 35});
-        server.AddDocument(5, content, status, {-7, -3, -5});
-        server.AddDocument(6, content, status, {-7, -2});
+        (void)server.AddDocument(1, content, status, {0});
+        (void)server.AddDocument(2, content, status, {0, 5, 10});
+        (void)server.AddDocument(3, content, status, {-2, -1, 0});
+        (void)server.AddDocument(4, content, status, {-5, 0, 35});
+        (void)server.AddDocument(5, content, status, {-7, -3, -5});
+        (void)server.AddDocument(6, content, status, {-7, -2});
         ASSERT_EQUAL(server.GetDocumentCount(), 6);
 
         const auto docs = server.FindTopDocuments(content, status);
@@ -262,7 +272,7 @@ void TestRating() {
     { // Проверяем, что при отсутствии рейтинга, рейтинг будет равен 0 по умолчанию
         SearchServer server;
 
-        server.AddDocument(1, content, status, {});
+        (void)server.AddDocument(1, content, status, {});
 
         const auto docs = server.FindTopDocuments(content, status);
 
@@ -279,7 +289,7 @@ void TestRating() {
         }
         const int average = (ratings.front() + ratings.back()) / 2;
 
-        server.AddDocument(1, content, status, ratings);
+        (void)server.AddDocument(1, content, status, ratings);
 
         const auto docs = server.FindTopDocuments(content, status);
 
@@ -304,9 +314,9 @@ void TestRating() {
         vector<int> ratings_3 = {5, halh_max, quarter_max, quarter_max, quarter_max};
         // (5 + 2q + q + q + q) / 5 = q + 1
 
-        server.AddDocument(1, content, status, ratings_1);
-        server.AddDocument(2, content, status, ratings_2);
-        server.AddDocument(3, content, status, ratings_3);
+        (void)server.AddDocument(1, content, status, ratings_1);
+        (void)server.AddDocument(2, content, status, ratings_2);
+        (void)server.AddDocument(3, content, status, ratings_3);
 
         const auto docs = server.FindTopDocuments(content, status);
 
@@ -333,9 +343,9 @@ void TestRating() {
         vector<int> ratings_3 = {5, halh_min, quarter_min, quarter_min, quarter_min};
         // (5 + 2q + q + q + q) / 5 = q + 1
 
-        server.AddDocument(1, content, status, ratings_1);
-        server.AddDocument(2, content, status, ratings_2);
-        server.AddDocument(3, content, status, ratings_3);
+        (void)server.AddDocument(1, content, status, ratings_1);
+        (void)server.AddDocument(2, content, status, ratings_2);
+        (void)server.AddDocument(3, content, status, ratings_3);
 
         const auto docs = server.FindTopDocuments(content, status);
 
@@ -351,9 +361,9 @@ void TestFilterPredicate() {
     const string content{"kind cat with long tail"s};
     SearchServer server;
 
-    server.AddDocument(1, content, DocumentStatus::ACTUAL, {0, 5, 10});
-    server.AddDocument(2, content, DocumentStatus::ACTUAL, {-5, 0, 35});
-    server.AddDocument(3, content, DocumentStatus::IRRELEVANT, {-2, -1, -10});
+    (void)server.AddDocument(1, content, DocumentStatus::ACTUAL, {0, 5, 10});
+    (void)server.AddDocument(2, content, DocumentStatus::ACTUAL, {-5, 0, 35});
+    (void)server.AddDocument(3, content, DocumentStatus::IRRELEVANT, {-2, -1, -10});
 
     ASSERT_EQUAL(server.GetDocumentCount(), 3);
 
@@ -401,15 +411,15 @@ void TestDocumentsWithStatus() {
 
     server.SetStopWords("with");
 
-    server.AddDocument(11, content, DocumentStatus::ACTUAL, {0, 5, 10});
-    server.AddDocument(21, content, DocumentStatus::BANNED, {-5, 0, 35});
-    server.AddDocument(31, content, DocumentStatus::IRRELEVANT, {-2, -1, 0});
+    (void)server.AddDocument(11, content, DocumentStatus::ACTUAL, {0, 5, 10});
+    (void)server.AddDocument(21, content, DocumentStatus::BANNED, {-5, 0, 35});
+    (void)server.AddDocument(31, content, DocumentStatus::IRRELEVANT, {-2, -1, 0});
 
     // Проверяем, что ничего не будет найдено по несуществующему статусу
     const auto status_does_not_exist = server.FindTopDocuments(content, DocumentStatus::REMOVED);
     ASSERT_HINT(status_does_not_exist.empty(), "REMOVED status hasn't been added yet"s);
 
-    server.AddDocument(41, content, DocumentStatus::REMOVED, {-7, -3, -5});
+    (void)server.AddDocument(41, content, DocumentStatus::REMOVED, {-7, -3, -5});
 
     // Проверяем последовательно каждый статус
     TestDocumentsWithStatusProcess(server, content, 11, DocumentStatus::ACTUAL, "Actual document, id = 11"s);
@@ -429,18 +439,18 @@ void TestRelevanceValue() {
 
     server.SetStopWords("with");
 
-    server.AddDocument(5, "human tail", status, rating_1);
+    (void)server.AddDocument(5, "human tail", status, rating_1);
     //tail 1/2
-    server.AddDocument(2, "old angry fat dog with short tail"s, status, rating_1);
+    (void)server.AddDocument(2, "old angry fat dog with short tail"s, status, rating_1);
     //tail tf = 1/6
-    server.AddDocument(1, "nasty cat beautiful tail"s, status, rating_2);
+    (void)server.AddDocument(1, "nasty cat beautiful tail"s, status, rating_2);
     //cat tf = 1/4
     //tail tf = 1/4
-    server.AddDocument(4, "not beautiful cat"s, status, rating_1);
+    (void)server.AddDocument(4, "not beautiful cat"s, status, rating_1);
     //cat 1/3
-    server.AddDocument(3, "huge fat parrot"s, status, rating_1);
+    (void)server.AddDocument(3, "huge fat parrot"s, status, rating_1);
     //no word from the query
-    server.AddDocument(6, "removed cat"s, DocumentStatus::REMOVED, rating_1);
+    (void)server.AddDocument(6, "removed cat"s, DocumentStatus::REMOVED, rating_1);
     //removed document
 
     //idf:
@@ -477,6 +487,7 @@ void TestRelevanceValue() {
 // Функция TestSearchServer является точкой входа для запуска тестов
 void TestSearchServer() {
     RUN_TEST(TestAddDocuments);
+    RUN_TEST(TestAddDocumentsSpecialWordsAndWrongId);
     RUN_TEST(TestStopWords);
     RUN_TEST(TestExcludeStopWordsFromAddedDocumentContent);
     RUN_TEST(TestMinusWords);

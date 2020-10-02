@@ -119,8 +119,17 @@ tuple<vector<string>, DocumentStatus> SearchServer::MatchDocument(const string &
     return {words, document_data_.at(document_id).status};
 }
 
-void SearchServer::AddDocument(int document_id, const string &document, DocumentStatus status, const vector<int> &ratings) {
+bool SearchServer::AddDocument(int document_id, const string &document, DocumentStatus status, const vector<int> &ratings) {
+    if (document_id < 0 || document_data_.count(document_id)) {
+        return false;
+    }
+
     const vector<string> words = SplitIntoWordsNoStop(document);
+
+    if (!all_of(words.begin(), words.end(), IsValidWord)) {
+        return false;
+    }
+
     const double inv_word_count = 1.0 / words.size();
     for (const string& word : words) {
         word_to_document_freqs_[word][document_id] += inv_word_count;
@@ -131,6 +140,7 @@ void SearchServer::AddDocument(int document_id, const string &document, Document
     data.rating = ComputeAverageRating(ratings);
     data.status = status;
     document_data_.emplace(document_id, data);
+    return true;
 }
 
 vector<Document> SearchServer::FindTopDocuments(const string &raw_query, const DocumentStatus &status) const {
@@ -229,5 +239,12 @@ vector<Document> SearchServer::FindAllDocuments(const SearchServer::Query &query
                                     });
     }
     return matched_documents;
+}
+
+bool SearchServer::IsValidWord(const string &word)
+{
+    // A valid word must not contain special characters
+    return none_of(word.begin(), word.end(),
+                   [](char c) { return c >= '\0' && c < ' '; });
 }
 
