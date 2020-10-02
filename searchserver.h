@@ -139,6 +139,9 @@ private:
 
     Query ParseQuery(const string& text, const bool all_words = false) const;
 
+    [[nodiscard]] bool ParseQuery(const string& text, Query &query,
+                                  const bool all_words = false) const;
+
     // Existence required
     double ComputeWordInverseDocumentFreq(const string& word) const;
 

@@ -103,13 +103,11 @@ int SearchServer::GetDocumentCount() const {
 
 bool SearchServer::MatchDocument(const string &raw_query, int document_id,
                                  tuple<vector<string>, DocumentStatus> &result) const {
-    if (!IsValidWord(raw_query)) {
+    Query query;
+    if (!ParseQuery(raw_query, query, true)) {
         return false;
     }
-    const Query query = ParseQuery(raw_query, true);
-    if (!all_of(query.minus_words.begin(), query.minus_words.end(), IsValidMinusWord)) {
-        return false;
-    }
+
     vector<string> words;
     if (!HasMinusWord(query.minus_words, document_id)) {
         for (auto& word : query.plus_words) {
@@ -221,6 +219,28 @@ SearchServer::Query SearchServer::ParseQuery(const string &text, const bool all_
         }
     }
     return query;
+}
+
+bool SearchServer::ParseQuery(const string &text, SearchServer::Query &query,
+                              const bool all_words) const
+{
+    for (const string& word : SplitIntoWords(text)) {
+        if (!IsValidWord(word)) {
+            return false;
+        }
+        const QueryWord query_word = ParseQueryWord(word);
+        if (!query_word.is_stop || all_words) {
+            if (query_word.is_minus) {
+                if (!IsValidMinusWord(query_word.data)) {
+                    return false;
+                }
+                query.minus_words.insert(query_word.data);
+            } else {
+                query.plus_words.insert(query_word.data);
+            }
+        }
+    }
+    return true;
 }
 
 double SearchServer::ComputeWordInverseDocumentFreq(const string &word) const {
