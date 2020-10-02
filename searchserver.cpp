@@ -101,8 +101,15 @@ int SearchServer::GetDocumentCount() const {
     return document_count_;
 }
 
-tuple<vector<string>, DocumentStatus> SearchServer::MatchDocument(const string &raw_query, int document_id) const {
+bool SearchServer::MatchDocument(const string &raw_query, int document_id,
+                                 tuple<vector<string>, DocumentStatus> &result) const {
+    if (!IsValidWord(raw_query)) {
+        return false;
+    }
     const Query query = ParseQuery(raw_query, true);
+    if (!all_of(query.minus_words.begin(), query.minus_words.end(), IsValidMinusWord)) {
+        return false;
+    }
     vector<string> words;
     if (!HasMinusWord(query.minus_words, document_id)) {
         for (auto& word : query.plus_words) {
@@ -116,7 +123,8 @@ tuple<vector<string>, DocumentStatus> SearchServer::MatchDocument(const string &
         }
         sort(words.begin(), words.end());
     }
-    return {words, document_data_.at(document_id).status};
+    result = {words, document_data_.at(document_id).status};
+    return true;
 }
 
 bool SearchServer::AddDocument(int document_id, const string &document, DocumentStatus status, const vector<int> &ratings) {
@@ -256,5 +264,10 @@ bool SearchServer::IsValidWord(const string &word)
     // A valid word must not contain special characters
     return none_of(word.begin(), word.end(),
                    [](char c) { return c >= '\0' && c < ' '; });
+}
+
+bool SearchServer::IsValidMinusWord(const string& word)
+{
+    return word.size() > 0 && word.at(0) != '-';
 }
 

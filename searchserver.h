@@ -74,7 +74,8 @@ public:
 
     int GetDocumentCount() const;
 
-    tuple<vector<string>, DocumentStatus> MatchDocument(const string& raw_query, int document_id) const;
+    [[nodiscard]] bool MatchDocument(const string& raw_query, int document_id,
+                                     tuple<vector<string>, DocumentStatus> &result) const;
 
     [[nodiscard]] bool AddDocument(int document_id, const string& document, DocumentStatus status, const vector<int>& ratings);
 
@@ -144,6 +145,8 @@ private:
     vector<Document> FindAllDocuments(const Query& query) const;
 
     static bool IsValidWord(const string& word);
+
+    static bool IsValidMinusWord(const string& word);
 };
 
 #endif // SEARCHSERVER_H
