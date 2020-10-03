@@ -56,17 +56,13 @@ public:
 
     SearchServer() = default;
 
-    SearchServer(const string& stop_words) {
-        SetStopWords(stop_words);
+    template<typename StopWordsCollection>
+    explicit SearchServer(const StopWordsCollection& stop_words) :
+        stop_words_(MakeUniqueNonEmptyStringCollection(stop_words)){
     }
 
-    template<typename StopWordsCollection>
-    explicit SearchServer(const StopWordsCollection& stop_words) {
-        for (auto word : stop_words) {
-            if (!word.empty()) {
-                stop_words_.insert(word);
-            }
-        }
+    SearchServer(const string& stop_words) :
+        SearchServer(SplitIntoWords(stop_words)) {
     }
 
     void SetStopWords(const string& text);
@@ -153,6 +149,19 @@ private:
     static bool IsValidWord(const string& word);
 
     static bool IsValidMinusWord(const string& word);
+
+    vector<string> SplitIntoWords(const string& text) const;
+
+    template<typename StringCollection>
+    set<string> MakeUniqueNonEmptyStringCollection(const StringCollection& collection) const {
+        set<string> strings;
+        for (const string& word : collection) {
+            if (!word.empty()) {
+                strings.insert(word);
+            }
+        }
+        return strings;
+    }
 };
 
 #endif // SEARCHSERVER_H
