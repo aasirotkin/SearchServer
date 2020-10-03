@@ -382,68 +382,6 @@ void TestRating() {
         ASSERT_EQUAL_HINT(docs.size(), size_t(1), "Only one document has been added"s);
         ASSERT_EQUAL_HINT(docs.at(0).rating, average, "Server has been defeated by huge amount of ratings"s);
     }
-
-    { // Проверяем поведение для экстремально больших чисел рейтинга
-        SearchServer server;
-        const int halh_max = 0.5 * numeric_limits<int>::max();
-        const int quarter_max = 0.5 * halh_max;
-        const int average = quarter_max + 1;
-        // q = quarter_max
-        // 2q = halh_max
-
-        vector<int> ratings_1 = {halh_max, quarter_max, quarter_max, quarter_max, 5};
-        // (2q + q + q + q + 5) / 5 = q + 1
-
-        vector<int> ratings_2 = {halh_max, quarter_max, quarter_max, 5, quarter_max};
-        // (2q + q + q + 5 + q) / 5 = q + 1
-
-        vector<int> ratings_3 = {5, halh_max, quarter_max, quarter_max, quarter_max};
-        // (5 + 2q + q + q + q) / 5 = q + 1
-
-        (void)server.AddDocument(1, content, status, ratings_1);
-        (void)server.AddDocument(2, content, status, ratings_2);
-        (void)server.AddDocument(3, content, status, ratings_3);
-
-        const auto result = server.FindTopDocuments(content, status);
-        ASSERT(result.has_value());
-        vector<Document> docs = result.value();
-
-        ASSERT_EQUAL_HINT(docs.size(), size_t(3), "Only three documents have been added"s);
-        ASSERT_EQUAL_HINT(docs.at(0).rating, average, "Overflow has been occured"s);
-        ASSERT_EQUAL_HINT(docs.at(1).rating, average, "Overflow has been occured"s);
-        ASSERT_EQUAL_HINT(docs.at(2).rating, average, "Overflow has been occured"s);
-    }
-
-    { // Проверяем поведение для экстремально маленьких чисел рейтинга
-        SearchServer server;
-        const int halh_min = 0.5 * numeric_limits<int>::min();
-        const int quarter_min = 0.5 * halh_min;
-        const int average = quarter_min + 1;
-        // q = quarter_min
-        // 2q = halh_min
-
-        vector<int> ratings_1 = {halh_min, quarter_min, quarter_min, quarter_min, 5};
-        // (2q + q + q + q + 5) / 5 = q + 1
-
-        vector<int> ratings_2 = {halh_min, quarter_min, quarter_min, 5, quarter_min};
-        // (2q + q + q + 5 + q) / 5 = q + 1
-
-        vector<int> ratings_3 = {5, halh_min, quarter_min, quarter_min, quarter_min};
-        // (5 + 2q + q + q + q) / 5 = q + 1
-
-        (void)server.AddDocument(1, content, status, ratings_1);
-        (void)server.AddDocument(2, content, status, ratings_2);
-        (void)server.AddDocument(3, content, status, ratings_3);
-
-        const auto result = server.FindTopDocuments(content, status);
-        ASSERT(result.has_value());
-        vector<Document> docs = result.value();
-
-        ASSERT_EQUAL_HINT(docs.size(), size_t(3), "Only three documents have been added"s);
-        ASSERT_EQUAL_HINT(docs.at(0).rating, average, "Underflow has been occured"s);
-        ASSERT_EQUAL_HINT(docs.at(1).rating, average, "Underflow has been occured"s);
-        ASSERT_EQUAL_HINT(docs.at(2).rating, average, "Underflow has been occured"s);
-    }
 }
 
 // Фильтрация с использованием предиката
