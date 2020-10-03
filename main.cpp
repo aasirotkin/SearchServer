@@ -220,19 +220,17 @@ void TestMinusWords() {
 void TestMatchDocumentStatus(const SearchServer& server, const int id,
                              const DocumentStatus status) {
     { // Убедимся, что при наличии минус слова ничего найдено не будет
-        tuple<vector<string> , DocumentStatus> result;
-        ASSERT(server.MatchDocument("cat -city"s, id, result) == true);
-        auto words = get<0>(result);
-        auto status_out = get<1>(result);
+        const auto result = server.MatchDocument("cat -city"s, id);
+        ASSERT_HINT(result.has_value(), "This query is fine"s);
+        const auto [words, status_out] = result.value();
         ASSERT_HINT(words.empty(), "Query contains minus word"s);
         ASSERT_HINT(status_out == status, "Status must be correct"s);
     }
 
     { // Убедимся, что наличие минус слова, которого нет в документе, не повлияет на результат
-        tuple<vector<string> , DocumentStatus> result;
-        ASSERT(server.MatchDocument("cat city -fake"s, id, result) == true);
-        auto words = get<0>(result);
-        auto status_out = get<1>(result);
+        const auto result = server.MatchDocument("cat city -fake"s, id);
+        ASSERT_HINT(result.has_value(), "This query is fine"s);
+        const auto [words, status_out] = result.value();
         ASSERT_EQUAL(words.size(), size_t(2));
         // Здесь проверяется лексикографический порядок слова
         ASSERT_EQUAL_HINT(words.at(0), "cat"s, "Words order must be lexicographical"s);
@@ -240,32 +238,25 @@ void TestMatchDocumentStatus(const SearchServer& server, const int id,
         ASSERT_HINT(status_out == status, "Status must be correct"s);
     }
 
-    { // Убедимся, что если при наличии спецсимволов в запросе ничего найдено не будет
-        tuple<vector<string> , DocumentStatus> result;
-        ASSERT(server.MatchDocument("cat city \x12"s, id, result) == false);
-        auto words = get<0>(result);
-        ASSERT_HINT(words.empty(), "Query contains special words"s);
+    { // Убедимся, что при наличии спецсимволов в запросе ничего найдено не будет
+        const auto result = server.MatchDocument("cat city \x12"s, id);
+        ASSERT_HINT(!result.has_value(), "Query contains special symbols"s);
     }
 
     { // Убедимся, что если минус слово содержит два минуса, то ничего найдено не будет
-        tuple<vector<string> , DocumentStatus> result;
-        ASSERT(server.MatchDocument("cat --city"s, id, result) == false);
-        auto words = get<0>(result);
-        ASSERT_HINT(words.empty(), "Minus word contains double minus sign"s);
+        const auto result = server.MatchDocument("cat --city"s, id);
+        ASSERT_HINT(!result.has_value(), "Minus word contains double minus sign"s);
     }
 
     { // Убедимся, что если после знака минус нет слова, то ничего найдено не будет
-        tuple<vector<string> , DocumentStatus> result;
-        ASSERT(server.MatchDocument("cat - city"s, id, result) == false);
-        auto words = get<0>(result);
-        ASSERT_HINT(words.empty(), "Minus sign without word"s);
+        const auto result = server.MatchDocument("cat - city"s, id);
+        ASSERT_HINT(!result.has_value(), "Minus sign without word"s);
     }
 
     { // Убедимся, что знак минус между словами не считается минус словом
-        tuple<vector<string> , DocumentStatus> result;
-        ASSERT(server.MatchDocument("cat in the big-city"s, id, result) == true);
-        auto words = get<0>(result);
-        auto status_out = get<1>(result);
+        const auto result = server.MatchDocument("cat in the big-city"s, id);
+        ASSERT_HINT(result.has_value(), "This minus sign is between words, so it is fine"s);
+        const auto [words, status_out] = result.value();
         ASSERT_EQUAL(words.size(), size_t(3));
         ASSERT_HINT(status_out == status, "Status must be correct"s);
     }

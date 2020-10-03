@@ -101,11 +101,10 @@ int SearchServer::GetDocumentCount() const {
     return static_cast<int>(document_data_.size());
 }
 
-bool SearchServer::MatchDocument(const string &raw_query, int document_id,
-                                 tuple<vector<string>, DocumentStatus>& result) const {
+optional<tuple<vector<string>, DocumentStatus>> SearchServer::MatchDocument(const string &raw_query, int document_id) const {
     Query query;
     if (!ParseQuery(raw_query, query, true)) {
-        return false;
+        return nullopt;
     }
 
     vector<string> words;
@@ -121,8 +120,8 @@ bool SearchServer::MatchDocument(const string &raw_query, int document_id,
         }
         sort(words.begin(), words.end());
     }
-    result = {words, document_data_.at(document_id).status};
-    return true;
+
+    return tuple{words, document_data_.at(document_id).status};
 }
 
 bool SearchServer::AddDocument(int document_id, const string &document, DocumentStatus status, const vector<int> &ratings) {

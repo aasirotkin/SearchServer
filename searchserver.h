@@ -75,8 +75,7 @@ public:
 
     int GetDocumentCount() const;
 
-    [[nodiscard]] bool MatchDocument(const string& raw_query, int document_id,
-                                     tuple<vector<string>, DocumentStatus>& result) const;
+    optional<tuple<vector<string>, DocumentStatus>> MatchDocument(const string& raw_query, int document_id) const;
 
     [[nodiscard]] bool AddDocument(int document_id, const string& document, DocumentStatus status, const vector<int>& ratings);
 
