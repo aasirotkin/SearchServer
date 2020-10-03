@@ -147,16 +147,13 @@ bool SearchServer::AddDocument(int document_id, const string &document, Document
     return true;
 }
 
-bool SearchServer::FindTopDocuments(const string &raw_query, const DocumentStatus &status,
-                                                vector<Document>& result) const {
+optional<vector<Document> > SearchServer::FindTopDocuments(const string &raw_query, const DocumentStatus &status) const {
     return FindTopDocuments(raw_query,
-    [&status](int document_id, DocumentStatus st, int rating) { (void)document_id; (void)rating; return status == st; },
-    result);
+    [&status](int document_id, DocumentStatus st, int rating) { (void)document_id; (void)rating; return status == st; });
 }
 
-bool SearchServer::FindTopDocuments(const string &raw_query,
-                                                vector<Document>& result) const {
-    return FindTopDocuments(raw_query, DocumentStatus::ACTUAL, result);
+optional<vector<Document> > SearchServer::FindTopDocuments(const string &raw_query) const {
+    return FindTopDocuments(raw_query, DocumentStatus::ACTUAL);
 }
 
 int SearchServer::GetDocumentId(int index) const

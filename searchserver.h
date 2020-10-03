@@ -76,13 +76,12 @@ public:
     [[nodiscard]] bool AddDocument(int document_id, const string& document, DocumentStatus status, const vector<int>& ratings);
 
     template<typename KeyMapper>
-    [[nodiscard]] bool FindTopDocuments(const string& raw_query, const KeyMapper& mapper,
-                                        vector<Document>& result) const {
+    optional<vector<Document>> FindTopDocuments(const string& raw_query, const KeyMapper& mapper) const {
         Query query;
         if (!ParseQuery(raw_query, query)) {
-            return false;
+            return nullopt;
         }
-        result = FindAllDocuments(query);
+        vector<Document> result = FindAllDocuments(query);
 
         sort(result.begin(), result.end(),
              [](const Document& lhs, const Document& rhs) {
@@ -98,14 +97,12 @@ public:
         if (result.size() > MAX_RESULT_DOCUMENT_COUNT) {
             result.resize(MAX_RESULT_DOCUMENT_COUNT);
         }
-        return true;
+        return result;
     }
 
-    [[nodiscard]] bool FindTopDocuments(const string& raw_query, const DocumentStatus& status,
-                                        vector<Document>& result) const;
+    optional<vector<Document>> FindTopDocuments(const string& raw_query, const DocumentStatus& status) const;
 
-    [[nodiscard]] bool FindTopDocuments(const string& raw_query,
-                                        vector<Document>& result) const;
+    optional<vector<Document>> FindTopDocuments(const string& raw_query) const;
 
     int GetDocumentId(int index) const;
 
