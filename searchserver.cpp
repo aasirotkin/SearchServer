@@ -3,7 +3,7 @@
 #include <cmath>
 #include <iostream>
 
-const double MAX_RELEVANCE_ACCURACY = 10e-6;
+const double MAX_RELEVANCE_ACCURACY = 1e-6;
 
 /* -------------------------------------------------------------------------- */
 
@@ -81,12 +81,6 @@ void PrintDocument(const Document& document) {
 
 /* -------------------------------------------------------------------------- */
 
-void SearchServer::SetStopWords(const string &text) {
-    for (const string& word : SplitIntoWords(text)) {
-        stop_words_.insert(word);
-    }
-}
-
 string SearchServer::GetStopWords() const
 {
     string stop_words;
@@ -140,16 +134,15 @@ bool SearchServer::AddDocument(int document_id, const string &document, Document
     for (const string& word : words) {
         word_to_document_freqs_[word][document_id] += inv_word_count;
     }
-    document_data_.emplace(document_id, DocumentData{document_id,
-                                                     ComputeAverageRating(ratings),
+    document_data_.emplace(document_id, DocumentData{ComputeAverageRating(ratings),
                                                      status});
     document_ids_.push_back(document_id);
     return true;
 }
 
-optional<vector<Document> > SearchServer::FindTopDocuments(const string &raw_query, const DocumentStatus &status) const {
+optional<vector<Document> > SearchServer::FindTopDocuments(const string &raw_query, const DocumentStatus status) const {
     return FindTopDocuments(raw_query,
-    [&status](int document_id, DocumentStatus st, int rating) { (void)document_id; (void)rating; return status == st; });
+    [status](int document_id, DocumentStatus st, int rating) { (void)document_id; (void)rating; return status == st; });
 }
 
 optional<vector<Document> > SearchServer::FindTopDocuments(const string &raw_query) const {
@@ -219,6 +212,7 @@ bool SearchServer::ParseQueryWord(string text, QueryWord &query_word) const {
 bool SearchServer::ParseQuery(const string &text, SearchServer::Query& query,
                               const bool all_words) const
 {
+    query = {};
     for (const string& word : SplitIntoWords(text)) {
         QueryWord query_word;
         if (!ParseQueryWord(word, query_word)) {
@@ -237,38 +231,6 @@ bool SearchServer::ParseQuery(const string &text, SearchServer::Query& query,
 
 double SearchServer::ComputeWordInverseDocumentFreq(const string &word) const {
     return log(document_data_.size() * 1.0 / word_to_document_freqs_.at(word).size());
-}
-
-vector<Document> SearchServer::FindAllDocuments(const SearchServer::Query &query) const {
-    map<int, double> document_to_relevance;
-    for (const string& word : query.plus_words) {
-        if (word_to_document_freqs_.count(word) == 0) {
-            continue;
-        }
-        const double inverse_document_freq = ComputeWordInverseDocumentFreq(word);
-        for (const auto [document_id, term_freq] : word_to_document_freqs_.at(word)) {
-            document_to_relevance[document_id] += term_freq * inverse_document_freq;
-        }
-    }
-
-    for (const string& word : query.minus_words) {
-        if (word_to_document_freqs_.count(word) == 0) {
-            continue;
-        }
-        for (const auto [document_id, _] : word_to_document_freqs_.at(word)) {
-            document_to_relevance.erase(document_id);
-        }
-    }
-
-    vector<Document> matched_documents;
-    for (const auto [document_id, relevance] : document_to_relevance) {
-        matched_documents.push_back({
-                                        document_id,
-                                        relevance,
-                                        document_data_.at(document_id).rating
-                                    });
-    }
-    return matched_documents;
 }
 
 bool SearchServer::IsValidWord(const string &word)

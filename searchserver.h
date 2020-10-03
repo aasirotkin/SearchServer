@@ -42,7 +42,6 @@ enum class DocumentStatus
 
 struct DocumentData
 {
-    int id;
     int rating;
     DocumentStatus status;
 };
@@ -58,14 +57,12 @@ public:
 
     template<typename StopWordsCollection>
     explicit SearchServer(const StopWordsCollection& stop_words) :
-        stop_words_(MakeUniqueNonEmptyStringCollection(stop_words)){
+        stop_words_(MakeUniqueNonEmptyStringCollection(stop_words)) {
     }
 
     SearchServer(const string& stop_words) :
         SearchServer(SplitIntoWords(stop_words)) {
     }
-
-    void SetStopWords(const string& text);
 
     string GetStopWords() const;
 
@@ -75,24 +72,18 @@ public:
 
     [[nodiscard]] bool AddDocument(int document_id, const string& document, DocumentStatus status, const vector<int>& ratings);
 
-    template<typename KeyMapper>
-    optional<vector<Document>> FindTopDocuments(const string& raw_query, const KeyMapper& mapper) const {
+    template<typename DocumentPredicate>
+    optional<vector<Document>> FindTopDocuments(const string& raw_query, const DocumentPredicate& predicate) const {
         Query query;
         if (!ParseQuery(raw_query, query)) {
             return nullopt;
         }
-        vector<Document> result = FindAllDocuments(query);
+        vector<Document> result = FindAllDocuments(query, predicate);
 
         sort(result.begin(), result.end(),
              [](const Document& lhs, const Document& rhs) {
             return Document::CompareRelevance(lhs, rhs);
         });
-
-        result.erase(
-                    remove_if(result.begin(), result.end(),
-                              [this, &mapper](const Document& doc) {
-            return !mapper(doc.id, document_data_.at(doc.id).status, document_data_.at(doc.id).rating); }),
-                    result.end());
 
         if (result.size() > MAX_RESULT_DOCUMENT_COUNT) {
             result.resize(MAX_RESULT_DOCUMENT_COUNT);
@@ -100,7 +91,7 @@ public:
         return result;
     }
 
-    optional<vector<Document>> FindTopDocuments(const string& raw_query, const DocumentStatus& status) const;
+    optional<vector<Document>> FindTopDocuments(const string& raw_query, const DocumentStatus status) const;
 
     optional<vector<Document>> FindTopDocuments(const string& raw_query) const;
 
@@ -141,7 +132,41 @@ private:
     // Existence required
     double ComputeWordInverseDocumentFreq(const string& word) const;
 
-    vector<Document> FindAllDocuments(const Query& query) const;
+    template<typename DocumentPredicate>
+    vector<Document> FindAllDocuments(const Query& query, const DocumentPredicate& predicate) const {
+        map<int, double> document_to_relevance;
+        for (const string& word : query.plus_words) {
+            if (word_to_document_freqs_.count(word) == 0) {
+                continue;
+            }
+            const double inverse_document_freq = ComputeWordInverseDocumentFreq(word);
+            for (const auto [document_id, term_freq] : word_to_document_freqs_.at(word)) {
+                const auto& document_data = document_data_.at(document_id);
+                if (predicate(document_id, document_data.status, document_data.rating)) {
+                    document_to_relevance[document_id] += term_freq * inverse_document_freq;
+                }
+            }
+        }
+
+        for (const string& word : query.minus_words) {
+            if (word_to_document_freqs_.count(word) == 0) {
+                continue;
+            }
+            for (const auto [document_id, _] : word_to_document_freqs_.at(word)) {
+                document_to_relevance.erase(document_id);
+            }
+        }
+
+        vector<Document> matched_documents;
+        for (const auto [document_id, relevance] : document_to_relevance) {
+            matched_documents.push_back({
+                                            document_id,
+                                            relevance,
+                                            document_data_.at(document_id).rating
+                                        });
+        }
+        return matched_documents;
+    }
 
     static bool IsValidWord(const string& word);
 
