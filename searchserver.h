@@ -52,6 +52,7 @@ struct DocumentData
 class SearchServer {
 public:
     inline static constexpr int INVALID_DOCUMENT_ID = -1;
+    inline static constexpr size_t MAX_RESULT_DOCUMENT_COUNT = 5;
 
     SearchServer() = default;
 
@@ -99,8 +100,8 @@ public:
             return !mapper(doc.id, document_data_.at(doc.id).status, document_data_.at(doc.id).rating); }),
                     result.end());
 
-        if (result.size() > max_result_document_count_) {
-            result.resize(max_result_document_count_);
+        if (result.size() > MAX_RESULT_DOCUMENT_COUNT) {
+            result.resize(MAX_RESULT_DOCUMENT_COUNT);
         }
         return true;
     }
@@ -125,23 +126,22 @@ private:
         set<string> minus_words;
     };
 
-    const size_t max_result_document_count_{5};
-    int document_count_{0};
     set<string> stop_words_;
     map<string, map<int, double>> word_to_document_freqs_;
     map<int, DocumentData> document_data_;
+    vector<int> document_ids_;
 
     bool IsStopWord(const string& word) const {
         return stop_words_.count(word) > 0;
     }
 
-    vector<string> SplitIntoWordsNoStop(const string& text) const;
+    [[nodiscard]] bool SplitIntoWordsNoStop(const string& text, vector<string>& words) const;
 
     bool HasMinusWord(const set<string> minus_words, const int document_id) const;
 
     static int ComputeAverageRating(const vector<int>& ratings);
 
-    QueryWord ParseQueryWord(string text) const;
+    [[nodiscard]] bool ParseQueryWord(string text, QueryWord& query_word) const;
 
     [[nodiscard]] bool ParseQuery(const string& text, Query& query,
                                   const bool all_words = false) const;

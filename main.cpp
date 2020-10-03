@@ -585,7 +585,7 @@ void TestGetDocumentId() {
     ASSERT_EQUAL(server.GetDocumentId(-1), SearchServer::INVALID_DOCUMENT_ID);
     ASSERT_EQUAL(server.GetDocumentId(6), SearchServer::INVALID_DOCUMENT_ID);
     ASSERT_EQUAL(server.GetDocumentId(10), SearchServer::INVALID_DOCUMENT_ID);
-    ASSERT(server.GetDocumentId(4) > 0);
+    ASSERT(server.GetDocumentId(4) == 4);
 }
 
 // Функция TestSearchServer является точкой входа для запуска тестов
