@@ -564,9 +564,6 @@ void TestGetDocumentId() {
     (void)server.AddDocument(3, "cat in the city"s, DocumentStatus::ACTUAL, {0});
     (void)server.AddDocument(4, "cat in the city"s, DocumentStatus::ACTUAL, {0});
     (void)server.AddDocument(5, "cat in the city"s, DocumentStatus::ACTUAL, {0});
-    ASSERT_EQUAL(server.GetDocumentId(-1), SearchServer::INVALID_DOCUMENT_ID);
-    ASSERT_EQUAL(server.GetDocumentId(6), SearchServer::INVALID_DOCUMENT_ID);
-    ASSERT_EQUAL(server.GetDocumentId(10), SearchServer::INVALID_DOCUMENT_ID);
     ASSERT(server.GetDocumentId(4) == 4);
 }
 
@@ -596,6 +593,19 @@ void TestAddDocumentsSpecialSymbols() {
     server.AddDocument(0, "cat in the ci\x12ty"s, DocumentStatus::ACTUAL, {0});
 }
 
+// Проверка формирования исключений при получении id по отрицательному индексу
+void TestGetDocumentIdNegativeIndex() {
+    SearchServer server;
+    server.GetDocumentId(-1);
+}
+
+// Проверка формирования исключений при получении id по индексу превышающему число документов
+void TestGetDocumentIdIndexMoreThanDocumentCount() {
+    SearchServer server;
+    server.AddDocument(0, "cat in the city"s, DocumentStatus::ACTUAL, {0});
+    server.GetDocumentId(1);
+}
+
 // -----------------------------------------------------------------------------
 
 // Проверка выброса исключения
@@ -604,6 +614,8 @@ void TestSeachServerExceptions() {
     ASSERT_INVALID_ARGUMENT(TestAddDocumentsNegativeId);
     ASSERT_INVALID_ARGUMENT(TestAddDocumentsExistingId);
     ASSERT_INVALID_ARGUMENT(TestAddDocumentsSpecialSymbols);
+    ASSERT_OUT_OF_RANGE(TestGetDocumentIdNegativeIndex);
+    ASSERT_OUT_OF_RANGE(TestGetDocumentIdIndexMoreThanDocumentCount);
 }
 
 // Функция TestSearchServer является точкой входа для запуска тестов

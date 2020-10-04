@@ -151,10 +151,7 @@ optional<vector<Document> > SearchServer::FindTopDocuments(const string &raw_que
 
 int SearchServer::GetDocumentId(int index) const
 {
-    if (index >= 0 && index < GetDocumentCount()) {
-        return document_ids_.at(index);
-    }
-    return INVALID_DOCUMENT_ID;
+    return document_ids_.at(index);
 }
 
 vector<string> SearchServer::SplitIntoWordsNoStop(const string& text) const {
