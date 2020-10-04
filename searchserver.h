@@ -69,27 +69,30 @@ public:
 
     int GetDocumentCount() const;
 
-    optional<tuple<vector<string>, DocumentStatus>> MatchDocument(const string& raw_query, int document_id) const;
+    tuple<vector<string>, DocumentStatus> MatchDocument(const string& raw_query, int document_id) const;
 
     void AddDocument(int document_id, const string& document, DocumentStatus status, const vector<int>& ratings);
 
     template<typename DocumentPredicate>
     optional<vector<Document>> FindTopDocuments(const string& raw_query, const DocumentPredicate& predicate) const {
-        Query query;
-        if (!ParseQuery(raw_query, query)) {
+        try {
+            Query query = ParseQuery(raw_query);
+
+            vector<Document> result = FindAllDocuments(query, predicate);
+
+            sort(result.begin(), result.end(),
+                 [](const Document& lhs, const Document& rhs) {
+                return Document::CompareRelevance(lhs, rhs);
+            });
+
+            if (result.size() > MAX_RESULT_DOCUMENT_COUNT) {
+                result.resize(MAX_RESULT_DOCUMENT_COUNT);
+            }
+            return result;
+        }
+        catch(const invalid_argument& error) {
             return nullopt;
         }
-        vector<Document> result = FindAllDocuments(query, predicate);
-
-        sort(result.begin(), result.end(),
-             [](const Document& lhs, const Document& rhs) {
-            return Document::CompareRelevance(lhs, rhs);
-        });
-
-        if (result.size() > MAX_RESULT_DOCUMENT_COUNT) {
-            result.resize(MAX_RESULT_DOCUMENT_COUNT);
-        }
-        return result;
     }
 
     optional<vector<Document>> FindTopDocuments(const string& raw_query, const DocumentStatus status) const;
@@ -125,10 +128,9 @@ private:
 
     static int ComputeAverageRating(const vector<int>& ratings);
 
-    [[nodiscard]] bool ParseQueryWord(string text, QueryWord& query_word) const;
+    QueryWord ParseQueryWord(string text) const;
 
-    [[nodiscard]] bool ParseQuery(const string& text, Query& query,
-                                  const bool all_words = false) const;
+    Query ParseQuery(const string& text, const bool all_words = false) const;
 
     // Existence required
     double ComputeWordInverseDocumentFreq(const string& word) const;

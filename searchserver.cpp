@@ -97,12 +97,8 @@ int SearchServer::GetDocumentCount() const {
     return static_cast<int>(document_data_.size());
 }
 
-optional<tuple<vector<string>, DocumentStatus>> SearchServer::MatchDocument(const string &raw_query, int document_id) const {
-    Query query;
-    if (!ParseQuery(raw_query, query, true)) {
-        return nullopt;
-    }
-
+tuple<vector<string>, DocumentStatus> SearchServer::MatchDocument(const string &raw_query, int document_id) const {
+    Query query = ParseQuery(raw_query, true);
     vector<string> words;
     if (!HasMinusWord(query.minus_words, document_id)) {
         for (auto& word : query.plus_words) {
@@ -117,7 +113,7 @@ optional<tuple<vector<string>, DocumentStatus>> SearchServer::MatchDocument(cons
         sort(words.begin(), words.end());
     }
 
-    return tuple{words, document_data_.at(document_id).status};
+    return {words, document_data_.at(document_id).status};
 }
 
 void SearchServer::AddDocument(int document_id, const string &document, DocumentStatus status, const vector<int> &ratings) {
@@ -186,9 +182,9 @@ int SearchServer::ComputeAverageRating(const vector<int> &ratings) {
     return 0;
 }
 
-bool SearchServer::ParseQueryWord(string text, QueryWord &query_word) const {
+SearchServer::QueryWord SearchServer::ParseQueryWord(string text) const {
     if (!IsValidWord(text)) {
-        return false;
+        throw invalid_argument("The word = "s + text + " contains special symbol"s);
     }
     bool is_minus = text[0] == '-';
     // Word shouldn't be empty
@@ -197,23 +193,18 @@ bool SearchServer::ParseQueryWord(string text, QueryWord &query_word) const {
         text = text.substr(1);
 
         if (!IsValidMinusWord(text)) {
-            return false;
+            throw invalid_argument("The word = "s + text + " is invalid minus word"s);
         }
     }
 
-    query_word = {text, is_minus, IsStopWord(text)};
-    return true;
+    return {text, is_minus, IsStopWord(text)};
 }
 
-bool SearchServer::ParseQuery(const string &text, SearchServer::Query& query,
-                              const bool all_words) const
+SearchServer::Query SearchServer::ParseQuery(const string &text, const bool all_words) const
 {
-    query = {};
+    Query query;
     for (const string& word : SplitIntoWords(text)) {
-        QueryWord query_word;
-        if (!ParseQueryWord(word, query_word)) {
-            return false;
-        }
+        QueryWord query_word = ParseQueryWord(word);
         if (!query_word.is_stop || all_words) {
             if (query_word.is_minus) {
                 query.minus_words.insert(query_word.data);
@@ -222,7 +213,7 @@ bool SearchServer::ParseQuery(const string &text, SearchServer::Query& query,
             }
         }
     }
-    return true;
+    return query;
 }
 
 double SearchServer::ComputeWordInverseDocumentFreq(const string &word) const {

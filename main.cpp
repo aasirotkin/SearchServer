@@ -261,17 +261,13 @@ void TestMinusWords() {
 void TestMatchDocumentStatus(const SearchServer& server, const int id,
                              const DocumentStatus status) {
     { // Убедимся, что при наличии минус слова ничего найдено не будет
-        const auto result = server.MatchDocument("cat -city"s, id);
-        ASSERT_HINT(result.has_value(), "This query is fine"s);
-        const auto [words, status_out] = result.value();
+        const auto [words, status_out] = server.MatchDocument("cat -city"s, id);
         ASSERT_HINT(words.empty(), "Query contains minus word"s);
         ASSERT_HINT(status_out == status, "Status must be correct"s);
     }
 
     { // Убедимся, что наличие минус слова, которого нет в документе, не повлияет на результат
-        const auto result = server.MatchDocument("cat city -fake"s, id);
-        ASSERT_HINT(result.has_value(), "This query is fine"s);
-        const auto [words, status_out] = result.value();
+        const auto [words, status_out] = server.MatchDocument("cat city -fake"s, id);
         ASSERT_EQUAL(words.size(), size_t(2));
         // Здесь проверяется лексикографический порядок слова
         ASSERT_EQUAL_HINT(words.at(0), "cat"s, "Words order must be lexicographical"s);
@@ -279,25 +275,8 @@ void TestMatchDocumentStatus(const SearchServer& server, const int id,
         ASSERT_HINT(status_out == status, "Status must be correct"s);
     }
 
-    { // Убедимся, что при наличии спецсимволов в запросе ничего найдено не будет
-        const auto result = server.MatchDocument("cat city \x12"s, id);
-        ASSERT_HINT(!result.has_value(), "Query contains special symbols"s);
-    }
-
-    { // Убедимся, что если минус слово содержит два минуса, то ничего найдено не будет
-        const auto result = server.MatchDocument("cat --city"s, id);
-        ASSERT_HINT(!result.has_value(), "Minus word contains double minus sign"s);
-    }
-
-    { // Убедимся, что если после знака минус нет слова, то ничего найдено не будет
-        const auto result = server.MatchDocument("cat - city"s, id);
-        ASSERT_HINT(!result.has_value(), "Minus sign without word"s);
-    }
-
     { // Убедимся, что знак минус между словами не считается минус словом
-        const auto result = server.MatchDocument("cat in the big-city"s, id);
-        ASSERT_HINT(result.has_value(), "This minus sign is between words, so it is fine"s);
-        const auto [words, status_out] = result.value();
+        const auto [words, status_out] = server.MatchDocument("cat in the big-city"s, id);
         ASSERT_EQUAL(words.size(), size_t(3));
         ASSERT_HINT(status_out == status, "Status must be correct"s);
     }
@@ -307,7 +286,7 @@ void TestMatchDocumentStatus(const SearchServer& server, const int id,
 void TestMatchDocument() {
     SearchServer server;
     const vector<int> ratings = {1, 2, 3};
-    const string content{"cat in the big city"};
+    const string content{"cat in the big city"s};
 
     ASSERT_EQUAL_HINT(server.GetDocumentCount(), 0, "The server must be empty yet"s);
 
@@ -606,6 +585,27 @@ void TestGetDocumentIdIndexMoreThanDocumentCount() {
     server.GetDocumentId(1);
 }
 
+// Проверка формирования исключений при наличии спецсимволов в методе MatchDocument
+void TestMatchDocumentSpecialSymbols() {
+    SearchServer server;
+    server.AddDocument(0, "cat in the big city"s, DocumentStatus::ACTUAL, {1, 2, 3});
+    const auto result = server.MatchDocument("cat city \x12"s, 0);
+}
+
+// Проверка формирования исключений при наличии двух минусов подряд
+void TestMatchDocumentDoubleMinus() {
+    SearchServer server;
+    server.AddDocument(0, "cat in the big city"s, DocumentStatus::ACTUAL, {1, 2, 3});
+    const auto result = server.MatchDocument("cat --city"s, 0);
+}
+
+// Проверка формирования исключений при наличии знака минус без слова
+void TestMatchDocumentMinusWithoutWord() {
+    SearchServer server;
+    server.AddDocument(0, "cat in the big city"s, DocumentStatus::ACTUAL, {1, 2, 3});
+    const auto result = server.MatchDocument("cat - city"s, 0);
+}
+
 // -----------------------------------------------------------------------------
 
 // Проверка выброса исключения
@@ -616,6 +616,9 @@ void TestSeachServerExceptions() {
     ASSERT_INVALID_ARGUMENT(TestAddDocumentsSpecialSymbols);
     ASSERT_OUT_OF_RANGE(TestGetDocumentIdNegativeIndex);
     ASSERT_OUT_OF_RANGE(TestGetDocumentIdIndexMoreThanDocumentCount);
+    ASSERT_INVALID_ARGUMENT(TestMatchDocumentSpecialSymbols);
+    ASSERT_INVALID_ARGUMENT(TestMatchDocumentDoubleMinus);
+    ASSERT_INVALID_ARGUMENT(TestMatchDocumentMinusWithoutWord);
 }
 
 // Функция TestSearchServer является точкой входа для запуска тестов
