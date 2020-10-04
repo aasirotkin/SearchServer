@@ -133,16 +133,6 @@ void TestAddDocuments() {
     }
 }
 
-// Дополнительные тесты на отсеивание неправильных id и спецслов
-void TestAddDocumentsSpecialWordsAndWrongId() {
-    SearchServer server;
-    ASSERT(server.AddDocument(-1, "cat in the city"s, DocumentStatus::ACTUAL, {0}) == false);
-    ASSERT(server.AddDocument(0, "cat in the city"s, DocumentStatus::ACTUAL, {0}) == true);
-    ASSERT(server.AddDocument(0, "cat in the city"s, DocumentStatus::ACTUAL, {0}) == false);
-    ASSERT(server.AddDocument(1, "cat in the ci\x12ty"s, DocumentStatus::ACTUAL, {0}) == false);
-    ASSERT_EQUAL(server.GetDocumentCount(), 1);
-}
-
 // Дополнительные тесты на отсеивание в случае наличия неправильных минус слов или спецслов в методе FindTopDocuments
 void TestFindTopDocumentsWrongQuery() {
     SearchServer server;
@@ -216,7 +206,7 @@ void TestExcludeStopWordsFromAddedDocumentContent() {
     // возвращает пустой результат
     {
         SearchServer server("in the"s);
-        ASSERT(server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings) == true);
+        server.AddDocument(doc_id, content, DocumentStatus::ACTUAL, ratings);
         const auto result = server.FindTopDocuments("in"s);
         ASSERT(result.has_value());
         vector<Document> found_docs = result.value();
@@ -399,7 +389,7 @@ void TestRating() {
     { // Проверяем, что при отсутствии рейтинга, рейтинг будет равен 0 по умолчанию
         SearchServer server;
 
-        ASSERT(server.AddDocument(1, content, status, {}) == true);
+        server.AddDocument(1, content, status, {});
 
         const auto result = server.FindTopDocuments(content, status);
         ASSERT(result.has_value());
@@ -580,20 +570,45 @@ void TestGetDocumentId() {
     ASSERT(server.GetDocumentId(4) == 4);
 }
 
+// -----------------------------------------------------------------------------
+
 // Проверка формирования исключения в конструкторе
 void TestSeachServerConstuctorException() {
     SearchServer server("in the \x12"s);
 }
 
+// Проверка формирования исключений при добавлении документа с отрицательным id
+void TestAddDocumentsNegativeId() {
+    SearchServer server;
+    server.AddDocument(-1, "cat in the city"s, DocumentStatus::ACTUAL, {0});
+}
+
+// Проверка формирования исключений при добавлении документа с существующим id
+void TestAddDocumentsExistingId() {
+    SearchServer server;
+    server.AddDocument(0, "cat in the city"s, DocumentStatus::ACTUAL, {0});
+    server.AddDocument(0, "cat in the city"s, DocumentStatus::ACTUAL, {0});
+}
+
+// Проверка формирования исключений при добавлении документа со специальными символами
+void TestAddDocumentsSpecialSymbols() {
+    SearchServer server;
+    server.AddDocument(0, "cat in the ci\x12ty"s, DocumentStatus::ACTUAL, {0});
+}
+
+// -----------------------------------------------------------------------------
+
 // Проверка выброса исключения
 void TestSeachServerExceptions() {
     ASSERT_INVALID_ARGUMENT(TestSeachServerConstuctorException);
+    ASSERT_INVALID_ARGUMENT(TestAddDocumentsNegativeId);
+    ASSERT_INVALID_ARGUMENT(TestAddDocumentsExistingId);
+    ASSERT_INVALID_ARGUMENT(TestAddDocumentsSpecialSymbols);
 }
 
 // Функция TestSearchServer является точкой входа для запуска тестов
 void TestSearchServer() {
     RUN_TEST(TestAddDocuments);
-    RUN_TEST(TestAddDocumentsSpecialWordsAndWrongId);
     RUN_TEST(TestFindTopDocumentsWrongQuery);
     RUN_TEST(TestStopWords);
     RUN_TEST(TestExcludeStopWordsFromAddedDocumentContent);

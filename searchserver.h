@@ -71,7 +71,7 @@ public:
 
     optional<tuple<vector<string>, DocumentStatus>> MatchDocument(const string& raw_query, int document_id) const;
 
-    [[nodiscard]] bool AddDocument(int document_id, const string& document, DocumentStatus status, const vector<int>& ratings);
+    void AddDocument(int document_id, const string& document, DocumentStatus status, const vector<int>& ratings);
 
     template<typename DocumentPredicate>
     optional<vector<Document>> FindTopDocuments(const string& raw_query, const DocumentPredicate& predicate) const {
@@ -119,7 +119,7 @@ private:
         return stop_words_.count(word) > 0;
     }
 
-    [[nodiscard]] bool SplitIntoWordsNoStop(const string& text, vector<string>& words) const;
+    vector<string> SplitIntoWordsNoStop(const string& text) const;
 
     bool HasMinusWord(const set<string> minus_words, const int document_id) const;
 

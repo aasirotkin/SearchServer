@@ -120,15 +120,16 @@ optional<tuple<vector<string>, DocumentStatus>> SearchServer::MatchDocument(cons
     return tuple{words, document_data_.at(document_id).status};
 }
 
-bool SearchServer::AddDocument(int document_id, const string &document, DocumentStatus status, const vector<int> &ratings) {
-    if (document_id < 0 || document_data_.count(document_id)) {
-        return false;
+void SearchServer::AddDocument(int document_id, const string &document, DocumentStatus status, const vector<int> &ratings) {
+    if (document_id < 0) {
+        throw invalid_argument("Document id must pe positive"s);
     }
 
-    vector<string> words;
-    if (!SplitIntoWordsNoStop(document, words)) {
-        return false;
+    if (document_data_.count(document_id)) {
+        throw invalid_argument("Document with id = "s + to_string(document_id) + "already exists"s);
     }
+
+    vector<string> words = SplitIntoWordsNoStop(document);
 
     const double inv_word_count = 1.0 / words.size();
     for (const string& word : words) {
@@ -137,7 +138,6 @@ bool SearchServer::AddDocument(int document_id, const string &document, Document
     document_data_.emplace(document_id, DocumentData{ComputeAverageRating(ratings),
                                                      status});
     document_ids_.push_back(document_id);
-    return true;
 }
 
 optional<vector<Document> > SearchServer::FindTopDocuments(const string &raw_query, const DocumentStatus status) const {
@@ -157,17 +157,17 @@ int SearchServer::GetDocumentId(int index) const
     return INVALID_DOCUMENT_ID;
 }
 
-bool SearchServer::SplitIntoWordsNoStop(const string& text, vector<string>& words) const {
+vector<string> SearchServer::SplitIntoWordsNoStop(const string& text) const {
+    vector<string> words;
     for (const string& word : SplitIntoWords(text)) {
         if (!IsValidWord(word)) {
-            words.clear();
-            return false;
+            throw invalid_argument("The word = "s + word + " contains special symbol"s);
         }
         if (!IsStopWord(word)) {
             words.push_back(word);
         }
     }
-    return true;
+    return words;
 }
 
 bool SearchServer::HasMinusWord(const set<string> minus_words, const int document_id) const {
