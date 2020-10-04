@@ -1,11 +1,12 @@
 #ifndef SEARCHSERVER_H
 #define SEARCHSERVER_H
 
+#include <algorithm>
 #include <map>
 #include <set>
+#include <stdexcept>
 #include <string>
 #include <vector>
-#include <algorithm>
 
 using namespace std;
 
@@ -60,7 +61,7 @@ public:
         stop_words_(MakeUniqueNonEmptyStringCollection(stop_words)) {
     }
 
-    SearchServer(const string& stop_words) :
+    explicit SearchServer(const string& stop_words) :
         SearchServer(SplitIntoWords(stop_words)) {
     }
 
@@ -178,6 +179,9 @@ private:
     set<string> MakeUniqueNonEmptyStringCollection(const StringCollection& collection) const {
         set<string> strings;
         for (const string& word : collection) {
+            if (!IsValidWord(word)) {
+                throw invalid_argument("Words can't contain special characters"s);
+            }
             if (!word.empty()) {
                 strings.insert(word);
             }

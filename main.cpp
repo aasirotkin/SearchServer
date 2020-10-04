@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <limits>
+#include <stdexcept>
 
 using namespace std;
 
@@ -55,6 +56,50 @@ void AssertEqualImpl(const T& t, const U& u, const string& t_str, const string& 
 #define ASSERT_EQUAL(a, b) AssertEqualImpl((a), (b), #a, #b, __FILE__, __FUNCTION__, __LINE__, ""s)
 
 #define ASSERT_EQUAL_HINT(a, b, hint) AssertEqualImpl((a), (b), #a, #b, __FILE__, __FUNCTION__, __LINE__, (hint))
+
+// -----------------------------------------------------------------------------
+
+enum class ErrorCode {
+    OUT_OF_RANGE,
+    INVALID_ARGUMENT
+};
+
+const string ErrorCodeName(ErrorCode code) {
+    switch(code) {
+    case ErrorCode::OUT_OF_RANGE: return "out_of_range"s;
+    case ErrorCode::INVALID_ARGUMENT: return "invalid_argument"s;
+    default: break;
+    }
+    return "invalid exception"s;
+}
+
+const string ErrorCodeHint(ErrorCode code) {
+    return "Must be "s + ErrorCodeName(code) + " exception"s;
+}
+
+template <typename Func>
+void AssertTrowImpl(Func& func, ErrorCode code,
+                    const string& file, const string& func_name, unsigned line) {
+    try
+    {
+        func();
+        AssertImpl(false, "Task failed successfully"s, file, func_name, line, ErrorCodeHint(code));
+    }
+    catch(const out_of_range& error) {
+        AssertImpl(code == ErrorCode::OUT_OF_RANGE, ErrorCodeName(code), file, func_name, line, ErrorCodeHint(code));
+    }
+    catch(const invalid_argument& error) {
+        AssertImpl(code == ErrorCode::INVALID_ARGUMENT, ErrorCodeName(code), file, func_name, line, ErrorCodeHint(code));
+    }
+    catch(...) {
+        AssertImpl(false, ErrorCodeName(code), file, func_name, line, ErrorCodeHint(code));
+    }
+    cerr << func_name << " OK" << endl;
+}
+
+#define ASSERT_OUT_OF_RANGE(a) AssertTrowImpl((a), ErrorCode::OUT_OF_RANGE, __FILE__, #a, __LINE__)
+
+#define ASSERT_INVALID_ARGUMENT(a) AssertTrowImpl((a), ErrorCode::INVALID_ARGUMENT, __FILE__, #a, __LINE__)
 
 // -------- Начало модульных тестов поисковой системы ----------
 
@@ -535,6 +580,16 @@ void TestGetDocumentId() {
     ASSERT(server.GetDocumentId(4) == 4);
 }
 
+// Проверка формирования исключения в конструкторе
+void TestSeachServerConstuctorException() {
+    SearchServer server("in the \x12"s);
+}
+
+// Проверка выброса исключения
+void TestSeachServerExceptions() {
+    ASSERT_INVALID_ARGUMENT(TestSeachServerConstuctorException);
+}
+
 // Функция TestSearchServer является точкой входа для запуска тестов
 void TestSearchServer() {
     RUN_TEST(TestAddDocuments);
@@ -550,6 +605,7 @@ void TestSearchServer() {
     RUN_TEST(TestDocumentsWithStatus);
     RUN_TEST(TestRelevanceValue);
     RUN_TEST(TestGetDocumentId);
+    RUN_TEST(TestSeachServerExceptions);
 }
 
 // --------- Окончание модульных тестов поисковой системы -----------
