@@ -136,12 +136,12 @@ void SearchServer::AddDocument(int document_id, const string &document, Document
     document_ids_.push_back(document_id);
 }
 
-optional<vector<Document> > SearchServer::FindTopDocuments(const string &raw_query, const DocumentStatus status) const {
+vector<Document> SearchServer::FindTopDocuments(const string &raw_query, const DocumentStatus status) const {
     return FindTopDocuments(raw_query,
     [status](int document_id, DocumentStatus st, int rating) { (void)document_id; (void)rating; return status == st; });
 }
 
-optional<vector<Document> > SearchServer::FindTopDocuments(const string &raw_query) const {
+vector<Document> SearchServer::FindTopDocuments(const string &raw_query) const {
     return FindTopDocuments(raw_query, DocumentStatus::ACTUAL);
 }
 

@@ -74,30 +74,25 @@ public:
     void AddDocument(int document_id, const string& document, DocumentStatus status, const vector<int>& ratings);
 
     template<typename DocumentPredicate>
-    optional<vector<Document>> FindTopDocuments(const string& raw_query, const DocumentPredicate& predicate) const {
-        try {
-            Query query = ParseQuery(raw_query);
+    vector<Document> FindTopDocuments(const string& raw_query, const DocumentPredicate& predicate) const {
+        Query query = ParseQuery(raw_query);
 
-            vector<Document> result = FindAllDocuments(query, predicate);
+        vector<Document> result = FindAllDocuments(query, predicate);
 
-            sort(result.begin(), result.end(),
-                 [](const Document& lhs, const Document& rhs) {
-                return Document::CompareRelevance(lhs, rhs);
-            });
+        sort(result.begin(), result.end(),
+             [](const Document& lhs, const Document& rhs) {
+            return Document::CompareRelevance(lhs, rhs);
+        });
 
-            if (result.size() > MAX_RESULT_DOCUMENT_COUNT) {
-                result.resize(MAX_RESULT_DOCUMENT_COUNT);
-            }
-            return result;
+        if (result.size() > MAX_RESULT_DOCUMENT_COUNT) {
+            result.resize(MAX_RESULT_DOCUMENT_COUNT);
         }
-        catch(const invalid_argument& error) {
-            return nullopt;
-        }
+        return result;
     }
 
-    optional<vector<Document>> FindTopDocuments(const string& raw_query, const DocumentStatus status) const;
+    vector<Document> FindTopDocuments(const string& raw_query, const DocumentStatus status) const;
 
-    optional<vector<Document>> FindTopDocuments(const string& raw_query) const;
+    vector<Document> FindTopDocuments(const string& raw_query) const;
 
     int GetDocumentId(int index) const;
 
