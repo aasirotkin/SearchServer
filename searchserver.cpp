@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <iostream>
+#include <numeric>
 
 const double MAX_RELEVANCE_ACCURACY = 1e-6;
 
@@ -18,8 +19,7 @@ void Document::Print() const {
 bool Document::CompareRelevance(const Document& lhs, const Document& rhs) {
     if (abs(lhs.relevance - rhs.relevance) < MAX_RELEVANCE_ACCURACY) {
         return lhs.rating > rhs.rating;
-    }
-    else {
+    } else {
         return lhs.relevance > rhs.relevance;
     }
 }
@@ -129,6 +129,9 @@ void SearchServer::AddDocument(int document_id, const string &document, Document
 
     const double inv_word_count = 1.0 / words.size();
     for (const string& word : words) {
+        if (word_to_document_freqs_[word].count(document_id) == 0) {
+            word_to_document_freqs_[word][document_id] = 0.0;
+        }
         word_to_document_freqs_[word][document_id] += inv_word_count;
     }
     document_data_.emplace(document_id, DocumentData{ComputeAverageRating(ratings),
@@ -172,14 +175,9 @@ bool SearchServer::HasMinusWord(const set<string> minus_words, const int documen
 }
 
 int SearchServer::ComputeAverageRating(const vector<int> &ratings) {
-    if (!ratings.empty()) {
-        int rating_sum = 0;
-        for (const int rating : ratings) {
-            rating_sum += rating;
-        }
-        return rating_sum / static_cast<int>(ratings.size());
-    }
-    return 0;
+    return (!ratings.empty())
+            ? accumulate(ratings.begin(), ratings.end(), 0) / static_cast<int>(ratings.size())
+            : 0;
 }
 
 SearchServer::QueryWord SearchServer::ParseQueryWord(string text) const {

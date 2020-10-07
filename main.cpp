@@ -70,6 +70,7 @@ const string ErrorCodeName(ErrorCode code) {
     case ErrorCode::INVALID_ARGUMENT: return "invalid_argument"s;
     default: break;
     }
+    ASSERT_HINT(false, "invalid exception"s);
     return "invalid exception"s;
 }
 
