@@ -8,12 +8,11 @@ const double MAX_RELEVANCE_ACCURACY = 1e-6;
 
 /* -------------------------------------------------------------------------- */
 
-void Document::Print() const {
-    cout << "{ "s
-         << "document_id = "s << id << ", "s
-         << "relevance = "s << relevance << ", "s
-         << "rating = "s << rating
-         << " }"s << endl;
+string Document::Str() const {
+    return "{ "s + "document_id = "s + to_string(id) + ", "s
+            + "relevance = "s + to_string(relevance) + ", "s
+            + "rating = "s + to_string(rating)
+            + " }"s;
 }
 
 bool Document::CompareRelevance(const Document& lhs, const Document& rhs) {

@@ -24,7 +24,7 @@ struct Document {
         relevance(input_relevance),
         rating(input_rating) {}
 
-    void Print() const;
+    string Str() const;
 
     static bool CompareRelevance(const Document& lhs, const Document& rhs);
 };
