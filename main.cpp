@@ -1,5 +1,6 @@
 #include "searchserver.h"
 
+#include <deque>
 #include <iostream>
 #include <limits>
 #include <stdexcept>
@@ -673,6 +674,50 @@ template <typename Container>
 auto Paginate(const Container& c, size_t page_size) {
     return Paginator(begin(c), end(c), page_size);
 }
+
+class RequestQueue {
+public:
+    explicit RequestQueue(const SearchServer& search_server)
+        : server_(search_server) {
+
+    }
+
+    template <typename DocumentPredicate>
+    vector<Document> AddFindRequest(const string& raw_query, DocumentPredicate document_predicate) {
+        vector<Document> docs = server_.FindTopDocuments(raw_query, document_predicate);
+        requests_.push_back({docs.size()});
+        if (requests_.size() > sec_in_day_) {
+            requests_.pop_front();
+        }
+        return docs;
+    }
+
+    vector<Document> AddFindRequest(const string& raw_query, DocumentStatus status) {
+        return AddFindRequest(raw_query,
+        [status](int document_id, DocumentStatus st, int rating) { (void)document_id; (void)rating; return status == st; });
+    }
+
+    vector<Document> AddFindRequest(const string& raw_query) {
+        return AddFindRequest(raw_query, DocumentStatus::ACTUAL);
+    }
+
+    int GetNoResultRequests() const {
+        int no_amount = 0;
+        for (const QueryResult& res : requests_) {
+            if (res.amount == 0) {
+                no_amount++;
+            }
+        }
+        return no_amount;
+    }
+private:
+    struct QueryResult {
+        size_t amount;
+    };
+    deque<QueryResult> requests_;
+    const static int sec_in_day_ = 1440;
+    const SearchServer& server_;
+};
 
 int main() {
     TestSearchServer();
