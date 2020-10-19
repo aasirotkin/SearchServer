@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <string>
+#include <vector>
 
 enum class DocumentStatus
 {
@@ -31,6 +32,10 @@ struct Document {
 
     static bool CompareRelevance(const Document& lhs, const Document& rhs);
 };
+
+void PrintDocument(const Document& document);
+
+void PrintMatchDocumentResult(int document_id, const std::vector<std::string>& words, DocumentStatus status);
 
 std::ostream& operator<< (std::ostream& out, const Document& doc);
 
