@@ -1,0 +1,6 @@
+#ifndef TEST_EXAMPLE_FUNCTIONS_H
+#define TEST_EXAMPLE_FUNCTIONS_H
+
+void TestSearchServer();
+
+#endif // TEST_EXAMPLE_FUNCTIONS_H

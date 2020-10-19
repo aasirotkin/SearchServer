@@ -1,84 +1,9 @@
-#include "searchserver.h"
+#include "search_server.h"
 
 #include <cmath>
-#include <iostream>
 #include <numeric>
 
-const double MAX_RELEVANCE_ACCURACY = 1e-6;
-
-/* -------------------------------------------------------------------------- */
-
-string Document::Str() const {
-    return "{ "s + "document_id = "s + to_string(id) + ", "s
-            + "relevance = "s + to_string(relevance) + ", "s
-            + "rating = "s + to_string(rating)
-            + " }"s;
-}
-
-bool Document::CompareRelevance(const Document& lhs, const Document& rhs) {
-    if (abs(lhs.relevance - rhs.relevance) < MAX_RELEVANCE_ACCURACY) {
-        return lhs.rating > rhs.rating;
-    } else {
-        return lhs.relevance > rhs.relevance;
-    }
-}
-
-/* -------------------------------------------------------------------------- */
-
-string ReadLine() {
-    string s;
-    getline(cin, s);
-    return s;
-}
-
-int ReadLineWithNumber() {
-    int result;
-    cin >> result;
-    ReadLine();
-    return result;
-}
-
-vector<string> SplitIntoWords(const string& text) {
-    vector<string> words;
-    string word;
-    for (const char c : text) {
-        if (c == ' ') {
-            if (!word.empty()) {
-                words.push_back(word);
-                word.clear();
-            }
-        } else {
-            word += c;
-        }
-    }
-    if (!word.empty()) {
-        words.push_back(word);
-    }
-
-    return words;
-}
-
-void PrintMatchDocumentResult(int document_id, const vector<string>& words,
-                              DocumentStatus status) {
-    cout << "{ "s
-         << "document_id = "s << document_id << ", "s
-         << "status = "s << static_cast<int>(status) << ", "s
-         << "words ="s;
-    for (const string& word : words) {
-        cout << ' ' << word;
-    }
-    cout << "}"s << endl;
-}
-
-void PrintDocument(const Document& document) {
-    cout << "{ "s
-         << "document_id = "s << document.id << ", "s
-         << "relevance = "s << document.relevance << ", "s
-         << "rating = "s << document.rating
-         << " }"s << endl;
-}
-
-/* -------------------------------------------------------------------------- */
+using namespace std;
 
 string SearchServer::GetStopWords() const
 {
