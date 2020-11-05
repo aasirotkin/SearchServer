@@ -6,3 +6,8 @@ Makefile.Debug
 Makefile.Release
 debug/
 release/
+.vs/
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user

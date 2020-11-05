@@ -89,10 +89,10 @@ void AssertTrowImpl(Func& func, ErrorCode code,
         func();
         AssertImpl(false, "Task failed successfully"s, file, func_name, line, ErrorCodeHint(code));
     }
-    catch(const out_of_range& error) {
+    catch(const out_of_range&) {
         AssertImpl(code == ErrorCode::OUT_OF_RANGE, ErrorCodeName(code), file, func_name, line, ErrorCodeHint(code));
     }
-    catch(const invalid_argument& error) {
+    catch(const invalid_argument&) {
         AssertImpl(code == ErrorCode::INVALID_ARGUMENT, ErrorCodeName(code), file, func_name, line, ErrorCodeHint(code));
     }
     catch(...) {
