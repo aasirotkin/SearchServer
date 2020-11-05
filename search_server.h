@@ -1,14 +1,15 @@
 #ifndef SEARCH_SERVER_H
 #define SEARCH_SERVER_H
 
+#include "document.h"
+#include "log_duration.h"
+
 #include <algorithm>
 #include <map>
 #include <set>
 #include <stdexcept>
 #include <string>
 #include <vector>
-
-#include "document.h"
 
 class SearchServer {
 public:

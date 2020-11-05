@@ -1,11 +1,11 @@
 #include "test_example_functions.h"
 
-#include <iostream>
-#include <string>
-
 #include "paginator.h"
 #include "request_queue.h"
 #include "search_server.h"
+
+#include <iostream>
+#include <string>
 
 using namespace std;
 
