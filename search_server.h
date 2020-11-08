@@ -65,6 +65,8 @@ public:
         return document_ids_.end();
     }
 
+    const std::map<std::string, double>& GetWordFrequencies(int document_id) const;
+
 private:
     struct QueryWord {
         std::string data;

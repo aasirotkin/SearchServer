@@ -50,6 +50,7 @@ void SearchServer::AddDocument(int document_id, const string &document, Document
     }
 
     vector<string> words = SplitIntoWordsNoStop(document);
+    map<string, double> word_frequency;
 
     const double inv_word_count = 1.0 / words.size();
     for (const string& word : words) {
@@ -57,9 +58,14 @@ void SearchServer::AddDocument(int document_id, const string &document, Document
             word_to_document_freqs_[word][document_id] = 0.0;
         }
         word_to_document_freqs_[word][document_id] += inv_word_count;
+
+        if (word_frequency.count(word) == 0) {
+            word_frequency[word] = 0.0;
+        }
+        word_frequency[word] += inv_word_count;
     }
     document_data_.emplace(document_id, DocumentData{ComputeAverageRating(ratings),
-                                                     status});
+                                                     status, word_frequency});
     document_ids_.push_back(document_id);
 }
 
@@ -75,6 +81,15 @@ vector<Document> SearchServer::FindTopDocuments(const string &raw_query) const {
 int SearchServer::GetDocumentId(int index) const
 {
     return document_ids_.at(index);
+}
+
+const map<string, double>& SearchServer::GetWordFrequencies(int document_id) const
+{
+    static const map<string, double> empty;
+    return
+        (document_data_.count(document_id) == 0)
+        ? empty
+        : document_data_.at(document_id).word_frequency;
 }
 
 vector<string> SearchServer::SplitIntoWordsNoStop(const string& text) const {

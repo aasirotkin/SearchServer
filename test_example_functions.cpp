@@ -494,6 +494,61 @@ void TestGetDocumentId() {
     }
 }
 
+// Проверка метода возврата частот
+void TestGetWordFrequencies() {
+    const double delta = 1e-6;
+    SearchServer server("you are in the has this oh my"s);
+
+    server.AddDocument(5, "Hello Kitty you are in the city"s, DocumentStatus::ACTUAL, { 1 });
+    // 3 words
+    // All have tf = 1/3
+    server.AddDocument(10, "Sweety pretty Kitty has lost in this city oh my god poor Kitty"s, DocumentStatus::ACTUAL, { 2 });
+    // 8 words (7 unique words)
+    // Sweety pretty lost city god tf = 1/8
+    // Kitty tf = 2/8 = 1/4
+
+    ASSERT_HINT(server.GetWordFrequencies(0).empty(), "Server doesn't has id = 0, result must be empty"s);
+
+    {
+        map<string, double> word_frequency_id_5 = server.GetWordFrequencies(5);
+
+        ASSERT_EQUAL_HINT(word_frequency_id_5.size(), size_t(3), "Document with id = 5 has 3 words"s);
+
+        ASSERT_HINT(word_frequency_id_5.count("Hello"s) == 1, "Document with id = 5 has 1 word 'Hello'"s);
+        ASSERT_HINT(InTheVicinity(word_frequency_id_5.at("Hello"s), 1.0 / 3.0, delta), "The word 'Hello' has frequency 1/3"s);
+
+        ASSERT_HINT(word_frequency_id_5.count("Kitty"s) == 1, "Document with id = 5 has 1 word 'Kitty'"s);
+        ASSERT_HINT(InTheVicinity(word_frequency_id_5.at("Kitty"s), 1.0 / 3.0, delta), "The word 'Kitty' has frequency 1/3"s);
+
+        ASSERT_HINT(word_frequency_id_5.count("city"s) == 1, "Document with id = 5 has 1 word 'city'"s);
+        ASSERT_HINT(InTheVicinity(word_frequency_id_5.at("city"s), 1.0 / 3.0, delta), "The word 'city' has frequency 1/3"s);
+    }
+
+    {
+        map<string, double> word_frequency_id_10 = server.GetWordFrequencies(10);
+
+        ASSERT_EQUAL_HINT(word_frequency_id_10.size(), size_t(7), "Document with id = 10 has 7 unique words"s);
+
+        ASSERT_HINT(word_frequency_id_10.count("Sweety"s) == 1, "Document with id = 5 has 1 word 'Sweety'"s);
+        ASSERT_HINT(InTheVicinity(word_frequency_id_10.at("Sweety"s), 1.0 / 8.0, delta), "The word 'Sweety' has frequency 1/8"s);
+
+        ASSERT_HINT(word_frequency_id_10.count("pretty"s) == 1, "Document with id = 5 has 1 word 'pretty'"s);
+        ASSERT_HINT(InTheVicinity(word_frequency_id_10.at("pretty"s), 1.0 / 8.0, delta), "The word 'pretty' has frequency 1/8"s);
+
+        ASSERT_HINT(word_frequency_id_10.count("lost"s) == 1, "Document with id = 5 has 1 word 'lost'"s);
+        ASSERT_HINT(InTheVicinity(word_frequency_id_10.at("lost"s), 1.0 / 8.0, delta), "The word 'lost' has frequency 1/8"s);
+
+        ASSERT_HINT(word_frequency_id_10.count("city"s) == 1, "Document with id = 5 has 1 word 'city'"s);
+        ASSERT_HINT(InTheVicinity(word_frequency_id_10.at("city"s), 1.0 / 8.0, delta), "The word 'city' has frequency 1/8"s);
+
+        ASSERT_HINT(word_frequency_id_10.count("god"s) == 1, "Document with id = 5 has 1 word 'god'"s);
+        ASSERT_HINT(InTheVicinity(word_frequency_id_10.at("god"s), 1.0 / 8.0, delta), "The word 'god' has frequency 1/8"s);
+
+        ASSERT_HINT(word_frequency_id_10.count("Kitty"s) == 1, "Document with id = 5 has 1 word 'Kitty'"s);
+        ASSERT_HINT(InTheVicinity(word_frequency_id_10.at("Kitty"s), 2.0 / 8.0, delta), "The word 'Kitty' has frequency 1/8"s);
+    }
+}
+
 // -----------------------------------------------------------------------------
 
 // Проверка формирования исключения в конструкторе
@@ -643,6 +698,7 @@ void TestSearchServer() {
     RUN_TEST(TestDocumentsWithStatus);
     RUN_TEST(TestRelevanceValue);
     RUN_TEST(TestGetDocumentId);
+    RUN_TEST(TestGetWordFrequencies);
     RUN_TEST(TestSeachServerExceptions);
     RUN_TEST(TestPaginator);
     RUN_TEST(TestRequestQueue);

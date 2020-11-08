@@ -2,6 +2,7 @@
 #define DOCUMENT_H
 
 #include <iostream>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -17,6 +18,7 @@ struct DocumentData
 {
     int rating;
     DocumentStatus status;
+    std::map<std::string, double> word_frequency;
 };
 
 struct Document {
