@@ -57,6 +57,14 @@ public:
 
     int GetDocumentId(int index) const;
 
+    const std::vector<int>::const_iterator begin() const {
+        return document_ids_.begin();
+    }
+
+    const std::vector<int>::const_iterator end() const {
+        return document_ids_.end();
+    }
+
 private:
     struct QueryWord {
         std::string data;

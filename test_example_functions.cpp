@@ -488,6 +488,10 @@ void TestGetDocumentId() {
     server.AddDocument(4, "cat in the city"s, DocumentStatus::ACTUAL, {0});
     server.AddDocument(5, "cat in the city"s, DocumentStatus::ACTUAL, {0});
     ASSERT(server.GetDocumentId(4) == 4);
+
+    for (int id : server) {
+        ASSERT_HINT(id >= 0 && id <= 5, "Id can't be beyond [1-5] interval"s);
+    }
 }
 
 // -----------------------------------------------------------------------------
