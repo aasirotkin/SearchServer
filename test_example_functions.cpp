@@ -549,6 +549,73 @@ void TestGetWordFrequencies() {
     }
 }
 
+// Проверка метода удаления документа
+void TestRemoveDocument() {
+    const double delta = 1e-6;
+    SearchServer server("and with as"s);
+
+    AddDocument(server, 2, "funny pet with curly hair"s, DocumentStatus::ACTUAL, { 1, 2 });
+    AddDocument(server, 4, "kind dog bite fat rat"s, DocumentStatus::ACTUAL, { 1, 2 });
+    AddDocument(server, 6, "fluffy snake or cat"s, DocumentStatus::ACTUAL, { 1, 2 });
+
+    AddDocument(server, 1, "funny pet and nasty rat"s, DocumentStatus::ACTUAL, { 7, 2, 7 });
+    // nasty tf = 1/4
+    AddDocument(server, 3, "angry rat with black hat"s, DocumentStatus::ACTUAL, { 1, 2 });
+    // black tf = 1/4
+    AddDocument(server, 5, "fat fat cat"s, DocumentStatus::ACTUAL, { 1, 2 });
+    // cat tf = 1/3
+    AddDocument(server, 7, "sharp as hedgehog"s, DocumentStatus::ACTUAL, { 1, 2 });
+    // sharp tf = 1/2
+
+    // kind - doesn't occur
+    // nasty - log(4)
+    // black - log(4)
+    // cat - log(4)
+    // sharp - log(4)
+
+    // 7 - 1/2 * log(4) = 0.6931471805599453
+    // 5 - 1/3 * log(4) = 0.46209812037329684
+    // 1 - 1/4 * log(4) = 0.34657359027997264
+    // 3 - 1/4 * log(4) = 0.34657359027997264
+
+    server.RemoveDocument(0);
+    server.RemoveDocument(8);
+
+    ASSERT_EQUAL_HINT(server.GetDocumentCount(), 7, "Nothing has been removed, yet!"s);
+
+    server.RemoveDocument(2);
+    server.RemoveDocument(4);
+    server.RemoveDocument(6);
+
+    ASSERT_EQUAL_HINT(server.GetDocumentCount(), 4, "3 documents have been removed"s);
+
+    // Check document_data_
+    ASSERT_HINT(server.GetWordFrequencies(2).empty(), "Server doesn't has id = 2, result must be empty"s);
+    ASSERT_HINT(server.GetWordFrequencies(4).empty(), "Server doesn't has id = 4, result must be empty"s);
+    ASSERT_HINT(server.GetWordFrequencies(6).empty(), "Server doesn't has id = 6, result must be empty"s);
+
+    // Check document_ids_
+    for (int id : server) {
+        ASSERT_HINT(id % 2 == 1, "Only odd ids has been left"s);
+    }
+
+    // Check word_to_document_freqs_
+    const auto docs = server.FindTopDocuments("kind nasty black sharp cat"s);
+    ASSERT_HINT(docs.size() == 4, "All documents must be found"s);
+
+    ASSERT_EQUAL_HINT(docs.at(0).id, 7, "Max relevance has doc with id 7"s);
+    ASSERT_HINT(InTheVicinity(docs.at(0).relevance, 0.6931471805599453, delta), "Wrong relevance"s);
+
+    ASSERT_EQUAL_HINT(docs.at(1).id, 5, "Second relevance has doc with id 5"s);
+    ASSERT_HINT(InTheVicinity(docs.at(1).relevance, 0.46209812037329684, delta), "Wrong relevance"s);
+
+    ASSERT_EQUAL_HINT(docs.at(2).id, 1, "Third relevance has doc with id 1"s);
+    ASSERT_HINT(InTheVicinity(docs.at(2).relevance, 0.34657359027997264, delta), "Wrong relevance"s);
+
+    ASSERT_EQUAL_HINT(docs.at(3).id, 3, "Forth relevance has doc with id 3"s);
+    ASSERT_HINT(InTheVicinity(docs.at(3).relevance, 0.34657359027997264, delta), "Wrong relevance"s);
+}
+
 // -----------------------------------------------------------------------------
 
 // Проверка формирования исключения в конструкторе
@@ -699,6 +766,7 @@ void TestSearchServer() {
     RUN_TEST(TestRelevanceValue);
     RUN_TEST(TestGetDocumentId);
     RUN_TEST(TestGetWordFrequencies);
+    RUN_TEST(TestRemoveDocument);
     RUN_TEST(TestSeachServerExceptions);
     RUN_TEST(TestPaginator);
     RUN_TEST(TestRequestQueue);

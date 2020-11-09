@@ -67,6 +67,8 @@ public:
 
     const std::map<std::string, double>& GetWordFrequencies(int document_id) const;
 
+    void RemoveDocument(int document_id);
+
 private:
     struct QueryWord {
         std::string data;
@@ -105,7 +107,8 @@ private:
     std:: vector<Document> FindAllDocuments(const Query& query, const DocumentPredicate& predicate) const {
         std::map<int, double> document_to_relevance;
         for (const std::string& word : query.plus_words) {
-            if (word_to_document_freqs_.count(word) == 0) {
+            if (word_to_document_freqs_.count(word) == 0 ||
+                word_to_document_freqs_.at(word).size() == 0) {
                 continue;
             }
             const double inverse_document_freq = ComputeWordInverseDocumentFreq(word);

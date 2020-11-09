@@ -92,6 +92,25 @@ const map<string, double>& SearchServer::GetWordFrequencies(int document_id) con
         : document_data_.at(document_id).word_frequency;
 }
 
+void SearchServer::RemoveDocument(int document_id)
+{
+    auto iterator_to_remove = find(document_ids_.begin(), document_ids_.end(), document_id);
+    if (iterator_to_remove != document_ids_.end()) {
+        vector<string> words_to_remove;
+        document_ids_.erase(iterator_to_remove);
+        document_data_.erase(document_id);
+        for (auto& [word, id_freqs] : word_to_document_freqs_) {
+            id_freqs.erase(document_id);
+            if (id_freqs.size() == 0) {
+                words_to_remove.push_back(word);
+            }
+        }
+        for (const string& word : words_to_remove) {
+            word_to_document_freqs_.erase(word);
+        }
+    }
+}
+
 vector<string> SearchServer::SplitIntoWordsNoStop(const string& text) const {
     vector<string> words;
     for (const string& word : SplitIntoWords(text)) {
