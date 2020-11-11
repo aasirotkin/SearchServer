@@ -2,12 +2,28 @@
 
 #include "paginator.h"
 #include "request_queue.h"
+#include "remove_duplicates.h"
 #include "search_server.h"
 
 #include <iostream>
 #include <string>
 
 using namespace std;
+
+// -----------------------------------------------------------------------------
+
+template <typename Type>
+ostream& operator<< (ostream& out, const vector<Type>& vect) {
+    out << "{ "s;
+    for (auto it = vect.begin(); it != vect.end(); ++it) {
+        if (it != vect.begin()) {
+            out << ", ";
+        }
+        out << *it;
+    }
+    out << " }";
+    return out;
+}
 
 // -----------------------------------------------------------------------------
 
@@ -616,6 +632,40 @@ void TestRemoveDocument() {
     ASSERT_HINT(InTheVicinity(docs.at(3).relevance, 0.34657359027997264, delta), "Wrong relevance"s);
 }
 
+// Проверка функции определения дубликатов
+void TestFindDuplicateIds() {
+    SearchServer search_server("and with"s);
+
+    AddDocument(search_server, 1, "funny pet and nasty rat"s, DocumentStatus::ACTUAL, { 7, 2, 7 });
+    AddDocument(search_server, 2, "funny pet with curly hair"s, DocumentStatus::ACTUAL, { 1, 2 });
+
+    // дубликат документа 2, будет удалён
+    AddDocument(search_server, 3, "funny pet with curly hair"s, DocumentStatus::ACTUAL, { 1, 2 });
+
+    // отличие только в стоп-словах, считаем дубликатом
+    AddDocument(search_server, 4, "funny pet and curly hair"s, DocumentStatus::ACTUAL, { 1, 2 });
+
+    // множество слов такое же, считаем дубликатом документа 1
+    AddDocument(search_server, 5, "funny funny pet and nasty nasty rat"s, DocumentStatus::ACTUAL, { 1, 2 });
+
+    // добавились новые слова, дубликатом не является
+    AddDocument(search_server, 6, "funny pet and not very nasty rat"s, DocumentStatus::ACTUAL, { 1, 2 });
+
+    // множество слов такое же, как в id 6, несмотря на другой порядок, считаем дубликатом
+    AddDocument(search_server, 7, "very nasty rat and not very funny pet"s, DocumentStatus::ACTUAL, { 1, 2 });
+
+    // есть не все слова, не является дубликатом
+    AddDocument(search_server, 8, "pet with rat and rat and rat"s, DocumentStatus::ACTUAL, { 1, 2 });
+
+    // слова из разных документов, не является дубликатом
+    AddDocument(search_server, 9, "nasty rat with curly hair"s, DocumentStatus::ACTUAL, { 1, 2 });
+
+    vector<int> duplicates = FindDuplicateIds(search_server);
+
+    ASSERT_EQUAL_HINT(duplicates.size(), 4, "4 duplicates must have been found"s);
+    ASSERT_EQUAL_HINT(duplicates, vector<int>({ 3, 4, 5, 7 }), "Wrong duplicats sequence"s);
+}
+
 // -----------------------------------------------------------------------------
 
 // Проверка формирования исключения в конструкторе
@@ -767,6 +817,7 @@ void TestSearchServer() {
     RUN_TEST(TestGetDocumentId);
     RUN_TEST(TestGetWordFrequencies);
     RUN_TEST(TestRemoveDocument);
+    RUN_TEST(TestFindDuplicateIds);
     RUN_TEST(TestSeachServerExceptions);
     RUN_TEST(TestPaginator);
     RUN_TEST(TestRequestQueue);
