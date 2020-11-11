@@ -96,18 +96,16 @@ void SearchServer::RemoveDocument(int document_id)
 {
     auto iterator_to_remove = find(document_ids_.begin(), document_ids_.end(), document_id);
     if (iterator_to_remove != document_ids_.end()) {
-        vector<string> words_to_remove;
-        document_ids_.erase(iterator_to_remove);
-        document_data_.erase(document_id);
-        for (auto& [word, id_freqs] : word_to_document_freqs_) {
-            id_freqs.erase(document_id);
-            if (id_freqs.size() == 0) {
-                words_to_remove.push_back(word);
+        std::map<string, double>& word_frequency = document_data_.at(document_id).word_frequency;
+        for (const auto& [word, frequency] : word_frequency) {
+            word_to_document_freqs_.at(word).erase(document_id);
+            if (word_to_document_freqs_.at(word).size() == 0) {
+                word_to_document_freqs_.erase(word);
             }
         }
-        for (const string& word : words_to_remove) {
-            word_to_document_freqs_.erase(word);
-        }
+
+        document_ids_.erase(iterator_to_remove);
+        document_data_.erase(document_id);
     }
 }
 
