@@ -1,5 +1,4 @@
-#ifndef PAGINATOR_H
-#define PAGINATOR_H
+#pragma once
 
 #include <iostream>
 #include <vector>
@@ -72,5 +71,3 @@ template <typename Container>
 Paginator<typename Container::const_iterator> Paginate(const Container& c, size_t page_size) {
     return Paginator(begin(c), end(c), page_size);
 }
-
-#endif // PAGINATOR_H

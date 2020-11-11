@@ -1,6 +1,3 @@
-#ifndef TEST_EXAMPLE_FUNCTIONS_H
-#define TEST_EXAMPLE_FUNCTIONS_H
+#pragma once
 
 void TestSearchServer();
-
-#endif // TEST_EXAMPLE_FUNCTIONS_H

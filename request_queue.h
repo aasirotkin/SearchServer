@@ -1,5 +1,4 @@
-#ifndef REQUESTQUEUE_H
-#define REQUESTQUEUE_H
+#pragma once
 
 #include <deque>
 #include <string>
@@ -34,5 +33,3 @@ private:
     const static int sec_in_day_ = 1440;
     const SearchServer& server_;
 };
-
-#endif // REQUESTQUEUE_H

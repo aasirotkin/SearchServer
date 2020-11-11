@@ -1,5 +1,4 @@
-#ifndef STRING_PROCESSING_H
-#define STRING_PROCESSING_H
+#pragma once
 
 #include <set>
 #include <string>
@@ -17,5 +16,3 @@ std::set<std::string> MakeUniqueNonEmptyStrings(const StringContainer& strings) 
     }
     return non_empty_strings;
 }
-
-#endif // STRING_PROCESSING_H

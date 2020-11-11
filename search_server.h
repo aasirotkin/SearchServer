@@ -1,5 +1,4 @@
-#ifndef SEARCH_SERVER_H
-#define SEARCH_SERVER_H
+#pragma once
 
 #include "document.h"
 #include "log_duration.h"
@@ -166,5 +165,3 @@ void AddDocument(SearchServer& search_server, int document_id, const std::string
 void FindTopDocuments(const SearchServer& search_server, const std::string& raw_query);
 
 void MatchDocuments(const SearchServer& search_server, const std::string& query);
-
-#endif // SEARCH_SERVER_H

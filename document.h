@@ -1,5 +1,4 @@
-#ifndef DOCUMENT_H
-#define DOCUMENT_H
+#pragma once
 
 #include <iostream>
 #include <map>
@@ -40,5 +39,3 @@ void PrintDocument(const Document& document);
 void PrintMatchDocumentResult(int document_id, const std::vector<std::string>& words, DocumentStatus status);
 
 std::ostream& operator<< (std::ostream& out, const Document& doc);
-
-#endif // DOCUMENT_H
