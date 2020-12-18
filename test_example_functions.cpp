@@ -799,6 +799,42 @@ void TestProcessQueries()
     ASSERT_EQUAL_HINT(result.at(5).size(), 2, "On sixth query must have been found 2 documents"s);
 }
 
+// Проверка работы функции распараллеливающей обработку нескольких запросов и возвращающей результат в "плоском" виде
+void TestProcessQueriesJoined()
+{
+    SearchServer server;
+
+    server.AddDocument(0, "Emperor penguins spend their entire lives on Antarctic ice and in its waters"s, DocumentStatus::ACTUAL, { 0 });
+    // 13 words - sixth relevance
+    server.AddDocument(1, "A bald eagle's fair head may make it look bald"s, DocumentStatus::ACTUAL, { 0 });
+    // 10 words - forth relevance
+    server.AddDocument(2, "The great horned owl has no horns!"s, DocumentStatus::ACTUAL, { 0 });
+    // 7 words - first relevance
+    server.AddDocument(3, "Flamingos are famous for their bright pink feathers"s, DocumentStatus::ACTUAL, { 0 });
+    // 8 words - second relevance
+    server.AddDocument(4, "Snowy white tundra swans breed in the Arctic"s, DocumentStatus::ACTUAL, { 0 });
+    // 8 words - third relevance
+    server.AddDocument(5, "American crows range from southern Canada throughout the United States"s, DocumentStatus::ACTUAL, { 0 });
+    // 10 words - fifth relevance
+
+    vector<string> queries;
+    queries.push_back("Canada pink penguins"s); // 3 documents, id 0, 3 and 5
+    queries.push_back("Emperor eagle's"s); // 2 documents, id 0 and 1
+    queries.push_back("fair owl"s); // 2 documents, id 1 and 2
+    queries.push_back("great Flamingos"s); // 2 documents, id 2 and 3
+    queries.push_back("famous swans"s); // 2 documents, id 3 and 4
+    queries.push_back("Snowy crows"s); // 2 documents, id 4 and 5
+
+    vector<Document> result = ProcessQueriesJoined(server, queries);
+
+    ASSERT_EQUAL_HINT(result.size(), 13, "13 documents must have been found"s);
+
+    vector<int> right_id = { 3, 5, 0, 1, 0, 2, 1, 2, 3, 3, 4, 4, 5 };
+    for (int i = 0; i < 13; ++i) {
+        ASSERT_EQUAL_HINT(result.at(i).id, right_id.at(i), "Wrond id number"s);
+    }
+}
+
 // -----------------------------------------------------------------------------
 
 // Проверка работы Пагинатора
@@ -858,4 +894,5 @@ void TestSearchServer() {
     RUN_TEST(TestPaginator);
     RUN_TEST(TestRequestQueue);
     RUN_TEST(TestProcessQueries);
+    RUN_TEST(TestProcessQueriesJoined);
 }
