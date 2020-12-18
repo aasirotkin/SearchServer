@@ -1,12 +1,14 @@
 #include "test_example_functions.h"
 
 #include "paginator.h"
+#include "process_queries.h"
 #include "request_queue.h"
 #include "remove_duplicates.h"
 #include "search_server.h"
 
 #include <iostream>
 #include <string>
+#include <vector>
 
 using namespace std;
 
@@ -765,6 +767,40 @@ void TestSeachServerExceptions() {
 
 // -----------------------------------------------------------------------------
 
+// Проверка работы функции распараллеливающей обработку нескольких запросов
+void TestProcessQueries()
+{
+    SearchServer server;
+
+    server.AddDocument(0, "Emperor penguins spend their entire lives on Antarctic ice and in its waters"s, DocumentStatus::ACTUAL, { 0 });
+    server.AddDocument(1, "A bald eagle's white head may make it look bald"s, DocumentStatus::ACTUAL, { 0 });
+    server.AddDocument(2, "The great horned owl has no horns!"s, DocumentStatus::ACTUAL, { 0 });
+    server.AddDocument(3, "Flamingos are famous for their bright pink feathers"s, DocumentStatus::ACTUAL, { 0 });
+    server.AddDocument(4, "Snowy white tundra swans breed in the Arctic"s, DocumentStatus::ACTUAL, { 0 });
+    server.AddDocument(5, "American crows range from southern Canada throughout the United States"s, DocumentStatus::ACTUAL, { 0 });
+
+    vector<string> queries;
+    queries.push_back("Canada pink penguins"s); // 3 documents, id 0, 3 and 5
+    queries.push_back("Emperor eagle's"s); // 2 documents, id 0 and 1
+    queries.push_back("bald owl"s); // 2 documents, id 1 and 2
+    queries.push_back("great Flamingos"s); // 2 documents, id 2 and 3
+    queries.push_back("famous swans"s); // 2 documents, id 3 and 4
+    queries.push_back("Snowy crows"s); // 2 documents, id 4 and 5
+
+    vector<vector<Document>> result = ProcessQueries(server, queries);
+
+    ASSERT_EQUAL_HINT(result.size(), 6, "Result size equals to queries amount, so it must be 6!"s);
+
+    ASSERT_EQUAL_HINT(result.at(0).size(), 3, "On first query must have been found 3 documents"s);
+    ASSERT_EQUAL_HINT(result.at(1).size(), 2, "On second query must have been found 2 documents"s);
+    ASSERT_EQUAL_HINT(result.at(2).size(), 2, "On third query must have been found 2 documents"s);
+    ASSERT_EQUAL_HINT(result.at(3).size(), 2, "On forth query must have been found 2 documents"s);
+    ASSERT_EQUAL_HINT(result.at(4).size(), 2, "On fifth query must have been found 2 documents"s);
+    ASSERT_EQUAL_HINT(result.at(5).size(), 2, "On sixth query must have been found 2 documents"s);
+}
+
+// -----------------------------------------------------------------------------
+
 // Проверка работы Пагинатора
 void TestPaginator() {
     SearchServer server;
@@ -821,4 +857,5 @@ void TestSearchServer() {
     RUN_TEST(TestSeachServerExceptions);
     RUN_TEST(TestPaginator);
     RUN_TEST(TestRequestQueue);
+    RUN_TEST(TestProcessQueries);
 }
