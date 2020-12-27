@@ -6,7 +6,10 @@
 #include "remove_duplicates.h"
 #include "search_server.h"
 
+#include <chrono>
+#include <execution>
 #include <iostream>
+#include <random>
 #include <string>
 #include <vector>
 
@@ -122,6 +125,42 @@ void AssertTrowImpl(Func& func, ErrorCode code,
 #define ASSERT_OUT_OF_RANGE(a) AssertTrowImpl((a), ErrorCode::OUT_OF_RANGE, __FILE__, #a, __LINE__)
 
 #define ASSERT_INVALID_ARGUMENT(a) AssertTrowImpl((a), ErrorCode::INVALID_ARGUMENT, __FILE__, #a, __LINE__)
+
+// -----------------------------------------------------------------------------
+
+template <typename UnitOfTime>
+class AssertDuration {
+public:
+    using Clock = std::chrono::steady_clock;
+
+    AssertDuration(int64_t max_duration, const std::string file, const std::string function, unsigned line)
+        : max_dur_(max_duration)
+        , file_(file)
+        , function_(function)
+        , line_(line) {
+    }
+
+    ~AssertDuration() {
+        const auto dur = Clock::now() - start_time_;
+        const auto converted_dur = std::chrono::duration_cast<UnitOfTime>(dur).count();
+        if (converted_dur > max_dur_) {
+            cerr << "Assert duration fail: "s << file_ << " "s << function_ << ": "s << line_ << endl;
+            cerr << "Process duration is "s << converted_dur << " while max duration is " << max_dur_ << endl;
+            cerr << "So the function worked longer on "s << converted_dur - max_dur_ << endl;
+            abort();
+        }
+    }
+
+private:
+    int64_t max_dur_;
+    std::string file_;
+    std::string function_;
+    unsigned line_;
+    const Clock::time_point start_time_ = Clock::now();
+};
+
+#define ASSERT_DURATION_MILLISECONDS(x) AssertDuration<std::chrono::milliseconds> UNIQUE_VAR_NAME_PROFILE(x, __FILE__, __FUNCTION__, __LINE__)
+#define ASSERT_DURATION_SECONDS(x) AssertDuration<std::chrono::seconds> UNIQUE_VAR_NAME_PROFILE(x, __FILE__, __FUNCTION__, __LINE__)
 
 // -------- Начало модульных тестов поисковой системы ----------
 
@@ -872,6 +911,55 @@ void TestRequestQueue() {
     ASSERT_EQUAL_HINT(queue.GetNoResultRequests(), 1430, "1430 empty requests were made"s);
 }
 
+// -----------------------------------------------------------------------------
+
+// Функции для генерации случайных слов и случайных наборов слов
+
+string GenerateWord(mt19937& generator, int max_word_lenght) {
+    int lenght = uniform_int_distribution(1, max_word_lenght)(generator);
+    string word;
+    word.reserve(lenght);
+    for (int i = 0; i < lenght; ++i) {
+        word.push_back(uniform_int_distribution(97, 122)(generator));
+    }
+    return word;
+}
+
+vector<string> GenerateWords(mt19937& generator, int word_count, int max_length) {
+    vector<string> words;
+    words.reserve(word_count);
+    for (int i = 0; i < word_count; ++i) {
+        words.push_back(GenerateWord(generator, max_length));
+    }
+    sort(words.begin(), words.end());
+    words.erase(unique(words.begin(), words.end()), words.end());
+    return words;
+}
+
+string GeneratePhrase(mt19937& generator, const vector<string>& words, int max_word_count_in_query, double minus_frequency = 0.0) {
+    const int word_count = uniform_int_distribution(1, max_word_count_in_query)(generator);
+    string query;
+    for (int i = 0; i < word_count; ++i) {
+        if (!query.empty()) {
+            query.push_back(' ');
+        }
+        if (uniform_real_distribution<>(0, 1)(generator) < minus_frequency) {
+            query.push_back('-');
+        }
+        query += words[uniform_int_distribution<int>(0, words.size() - 1)(generator)];
+    }
+    return query;
+}
+
+vector<string> GeneratePhrases(mt19937& generator, const vector<string>& words, int query_count, int max_word_count_in_query) {
+    vector<string> queries;
+    queries.reserve(query_count);
+    for (int i = 0; i < query_count; ++i) {
+        queries.push_back(GeneratePhrase(generator, words, max_word_count_in_query));
+    }
+    return queries;
+}
+
 // --------- Окончание модульных тестов поисковой системы -----------
 
 // Функция TestSearchServer является точкой входа для запуска тестов
@@ -891,8 +979,8 @@ void TestSearchServer() {
     RUN_TEST(TestRemoveDocument);
     RUN_TEST(TestFindDuplicateIds);
     RUN_TEST(TestSeachServerExceptions);
-    RUN_TEST(TestPaginator);
-    RUN_TEST(TestRequestQueue);
     RUN_TEST(TestProcessQueries);
     RUN_TEST(TestProcessQueriesJoined);
+    RUN_TEST(TestPaginator);
+    RUN_TEST(TestRequestQueue);
 }
