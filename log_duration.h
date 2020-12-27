@@ -33,9 +33,3 @@ private:
 #define UNIQUE_VAR_NAME_PROFILE PROFILE_CONCAT(profileGuard, __LINE__)
 #define LOG_DURATION(x) LogDuration UNIQUE_VAR_NAME_PROFILE(x)
 #define LOG_DURATION_STREAM(x, c) LogDuration UNIQUE_VAR_NAME_PROFILE(x, c)
-
-template <typename Function, typename InputData>
-void LogDurationOfFuncWithData(const std::string& name, const Function& func, const InputData& data) {
-    LOG_DURATION(name);
-    func(data);
-}
