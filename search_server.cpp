@@ -47,9 +47,7 @@ tuple<vector<string>, DocumentStatus> SearchServer::MatchDocument(const string& 
                 word_to_document_freqs_.at(word).count(document_id) == 0) {
                 continue;
             }
-            if (word_to_document_freqs_.at(word).at(document_id)) {
-                words.push_back(word);
-            }
+            words.push_back(word);
         }
         sort(words.begin(), words.end());
     }
