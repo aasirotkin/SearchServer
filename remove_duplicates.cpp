@@ -1,6 +1,7 @@
 #include "remove_duplicates.h"
 
 #include <algorithm>
+#include <iterator>
 #include <map>
 #include <string>
 
@@ -25,7 +26,7 @@ vector<int> FindDuplicateIds(const SearchServer& search_server) {
         if (count(ids_to_delete.begin(), ids_to_delete.end(), lhs_id) == 0) {
             const map<string, double>& lhs = search_server.GetWordFrequencies(lhs_id);
 
-            for (auto it_j = it_i + 1; it_j != search_server.end(); ++it_j) {
+            for (auto it_j = next(it_i, 1); it_j != search_server.end(); ++it_j) {
                 const int rhs_id = *it_j;
                 const map<string, double>& rhs = search_server.GetWordFrequencies(rhs_id);
 

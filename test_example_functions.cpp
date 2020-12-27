@@ -535,22 +535,6 @@ void TestRelevanceValue() {
     ASSERT_EQUAL(docs.at(3).id, 2);
 }
 
-// Проверка метода возврата id номера
-void TestGetDocumentId() {
-    SearchServer server;
-    server.AddDocument(0, "cat in the city"s, DocumentStatus::ACTUAL, {0});
-    server.AddDocument(1, "cat in the city"s, DocumentStatus::ACTUAL, {0});
-    server.AddDocument(2, "cat in the city"s, DocumentStatus::ACTUAL, {0});
-    server.AddDocument(3, "cat in the city"s, DocumentStatus::ACTUAL, {0});
-    server.AddDocument(4, "cat in the city"s, DocumentStatus::ACTUAL, {0});
-    server.AddDocument(5, "cat in the city"s, DocumentStatus::ACTUAL, {0});
-    ASSERT(server.GetDocumentId(4) == 4);
-
-    for (int id : server) {
-        ASSERT_HINT(id >= 0 && id <= 5, "Id can't be beyond [1-5] interval"s);
-    }
-}
-
 // Проверка метода возврата частот
 void TestGetWordFrequencies() {
     const double delta = 1e-6;
@@ -636,13 +620,13 @@ void TestRemoveDocument() {
     // 3 - 1/4 * log(4) = 0.34657359027997264
 
     server.RemoveDocument(0);
-    server.RemoveDocument(8);
+    server.RemoveDocument(execution::par, 8);
 
     ASSERT_EQUAL_HINT(server.GetDocumentCount(), 7, "Nothing has been removed, yet!"s);
 
     server.RemoveDocument(2);
-    server.RemoveDocument(4);
-    server.RemoveDocument(6);
+    server.RemoveDocument(execution::seq, 4);
+    server.RemoveDocument(execution::par, 6);
 
     ASSERT_EQUAL_HINT(server.GetDocumentCount(), 4, "3 documents have been removed"s);
 
@@ -733,19 +717,6 @@ void TestAddDocumentsSpecialSymbols() {
     server.AddDocument(0, "cat in the ci\x12ty"s, DocumentStatus::ACTUAL, {0});
 }
 
-// Проверка формирования исключений при получении id по отрицательному индексу
-void TestGetDocumentIdNegativeIndex() {
-    SearchServer server;
-    server.GetDocumentId(-1);
-}
-
-// Проверка формирования исключений при получении id по индексу превышающему число документов
-void TestGetDocumentIdIndexMoreThanDocumentCount() {
-    SearchServer server;
-    server.AddDocument(0, "cat in the city"s, DocumentStatus::ACTUAL, {0});
-    server.GetDocumentId(1);
-}
-
 // Проверка формирования исключений при наличии спецсимволов в методе MatchDocument
 void TestMatchDocumentSpecialSymbols() {
     SearchServer server;
@@ -794,8 +765,6 @@ void TestSeachServerExceptions() {
     ASSERT_INVALID_ARGUMENT(TestAddDocumentsNegativeId);
     ASSERT_INVALID_ARGUMENT(TestAddDocumentsExistingId);
     ASSERT_INVALID_ARGUMENT(TestAddDocumentsSpecialSymbols);
-    ASSERT_OUT_OF_RANGE(TestGetDocumentIdNegativeIndex);
-    ASSERT_OUT_OF_RANGE(TestGetDocumentIdIndexMoreThanDocumentCount);
     ASSERT_INVALID_ARGUMENT(TestMatchDocumentSpecialSymbols);
     ASSERT_INVALID_ARGUMENT(TestMatchDocumentDoubleMinus);
     ASSERT_INVALID_ARGUMENT(TestMatchDocumentMinusWithoutWord);
@@ -960,6 +929,28 @@ vector<string> GeneratePhrases(mt19937& generator, const vector<string>& words, 
     return queries;
 }
 
+// -----------------------------------------------------------------------------
+
+// Проверка скорости метода удаления документа
+void TestRemoveDocumentSpeed() {
+    mt19937 generator;
+    vector<string> words = GenerateWords(generator, 10'000, 25);
+    vector<string> phrases = GeneratePhrases(generator, words, 10'000, 100);
+
+    SearchServer server;
+    size_t max_id = phrases.size();
+    for (size_t i = 0; i < max_id; ++i) {
+        server.AddDocument(i, phrases.at(i), DocumentStatus::ACTUAL, { 0 });
+    }
+
+    ASSERT_DURATION_MILLISECONDS(500);
+    for (size_t i = 0; i < max_id; ++i) {
+        server.RemoveDocument(execution::par, i);
+    }
+
+    ASSERT_EQUAL(server.GetDocumentCount(), 0);
+}
+
 // --------- Окончание модульных тестов поисковой системы -----------
 
 // Функция TestSearchServer является точкой входа для запуска тестов
@@ -974,7 +965,6 @@ void TestSearchServer() {
     RUN_TEST(TestFilterPredicate);
     RUN_TEST(TestDocumentsWithStatus);
     RUN_TEST(TestRelevanceValue);
-    RUN_TEST(TestGetDocumentId);
     RUN_TEST(TestGetWordFrequencies);
     RUN_TEST(TestRemoveDocument);
     RUN_TEST(TestFindDuplicateIds);
@@ -983,4 +973,8 @@ void TestSearchServer() {
     RUN_TEST(TestProcessQueriesJoined);
     RUN_TEST(TestPaginator);
     RUN_TEST(TestRequestQueue);
+
+#ifndef _DEBUG
+    RUN_TEST(TestRemoveDocumentSpeed);
+#endif
 }

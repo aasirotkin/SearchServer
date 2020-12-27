@@ -4,6 +4,7 @@
 #include "log_duration.h"
 
 #include <algorithm>
+#include <execution>
 #include <map>
 #include <set>
 #include <stdexcept>
@@ -30,17 +31,18 @@ public:
     std::vector<Document> FindTopDocuments(const std::string& raw_query) const;
 
     void RemoveDocument(int document_id);
+    void RemoveDocument(const std::execution::sequenced_policy&, int document_id);
+    void RemoveDocument(const std::execution::parallel_policy&, int document_id);
 
     int GetDocumentCount() const;
-    int GetDocumentId(int index) const;
     const std::map<std::string, double>& GetWordFrequencies(int document_id) const;
     std::string GetStopWords() const;
 
-    const std::vector<int>::const_iterator begin() const {
+    const std::set<int>::const_iterator begin() const {
         return document_ids_.begin();
     }
 
-    const std::vector<int>::const_iterator end() const {
+    const std::set<int>::const_iterator end() const {
         return document_ids_.end();
     }
 
@@ -82,7 +84,7 @@ private:
     std::set<std::string> stop_words_;
     std::map<std::string, std::map<int, double>> word_to_document_freqs_;
     std::map<int, DocumentData> document_data_;
-    std::vector<int> document_ids_;
+    std::set<int> document_ids_;
 };
 
 template<typename StopWordsCollection>
