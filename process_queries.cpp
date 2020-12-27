@@ -13,7 +13,7 @@ std::vector<std::vector<Document>> ProcessQueries(
     std::transform(
         std::execution::par,
         queries.begin(), queries.end(), res.begin(),
-        [&search_server](const std::string query) {
+        [&search_server](const std::string& query) {
             return search_server.FindTopDocuments(query);
         });
 
@@ -24,9 +24,8 @@ std::vector<Document> ProcessQueriesJoined(
     const SearchServer& search_server,
     const std::vector<std::string>& queries)
 {
-    std::vector<std::vector<Document>> hiden_documents = ProcessQueries(search_server, queries);
     std::vector<Document> res;
-    for (std::vector<Document>& documents : hiden_documents) {
+    for (std::vector<Document>& documents : ProcessQueries(search_server, queries)) {
         std::move(documents.begin(), documents.end(), std::back_inserter(res));
     }
     return res;

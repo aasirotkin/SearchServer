@@ -96,7 +96,7 @@ void SearchServer::RemoveDocument(int document_id)
 {
     auto iterator_to_remove = find(document_ids_.begin(), document_ids_.end(), document_id);
     if (iterator_to_remove != document_ids_.end()) {
-        std::map<string, double>& word_frequency = document_data_.at(document_id).word_frequency;
+        const std::map<string, double>& word_frequency = document_data_.at(document_id).word_frequency;
         for (const auto& [word, frequency] : word_frequency) {
             word_to_document_freqs_.at(word).erase(document_id);
             if (word_to_document_freqs_.at(word).size() == 0) {

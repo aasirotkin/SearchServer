@@ -851,7 +851,7 @@ void TestPaginator() {
     vector<Document> docs = server.FindTopDocuments("city"s);
     Paginator pag = Paginate(docs, 2);
     ASSERT_EQUAL(pag.size(), size_t(3));
-    for (auto page : pag) {
+    for (const auto& page : pag) {
         size_t sz = page.size();
         ASSERT_HINT(sz > 0 && sz <= 2, "Page size must be 1 or 2"s);
     }
