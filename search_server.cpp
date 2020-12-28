@@ -95,22 +95,6 @@ void SearchServer::RemoveDocument(const execution::parallel_policy&, int documen
                 word_to_document_freqs_.at(word_freq.first).erase(document_id);
             });
 
-        //vector<const string*> words(word_frequency.size());
-        //transform(execution::par,
-        //    word_frequency.begin(), word_frequency.end(),
-        //    words.begin(), [](const auto& word_freq) { return &word_freq.first; });
-
-        //for_each(execution::par, words.begin(), words.end(),
-        //    [this, document_id](const string* word) {
-        //        word_to_document_freqs_.at(*word).erase(document_id);
-        //    });
-
-        //for (const string* word : words) {
-        //    if (word_to_document_freqs_.at(*word).size() == 0) {
-        //        word_to_document_freqs_.erase(*word);
-        //    }
-        //}
-
         document_ids_.erase(document_id);
         document_data_.erase(document_id);
     }
@@ -269,7 +253,6 @@ void FindTopDocuments(const SearchServer &search_server, const string &raw_query
 void MatchDocuments(const SearchServer &search_server, const string &query) {
     try {
         cout << "Матчинг документов по запросу: "s << query << endl;
-        const int document_count = search_server.GetDocumentCount();
         for (int document_id : search_server) {
             const auto [words, status] = search_server.MatchDocument(query, document_id);
             PrintMatchDocumentResult(document_id, words, status);
