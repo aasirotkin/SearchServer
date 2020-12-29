@@ -951,6 +951,30 @@ void TestRemoveDocumentSpeed() {
     ASSERT_EQUAL(server.GetDocumentCount(), 0);
 }
 
+// Проверка скорости метода матчинга документа
+void TestMatchDocumentSpeed() {
+    mt19937 generator;
+    vector<string> words = GenerateWords(generator, 10'000, 10);
+    vector<string> phrases = GeneratePhrases(generator, words, 10'000, 70);
+
+    SearchServer server;
+    size_t max_id = phrases.size();
+    for (size_t i = 0; i < max_id; ++i) {
+        server.AddDocument(i, phrases.at(i), DocumentStatus::ACTUAL, { 0 });
+    }
+
+    const string query = GeneratePhrase(generator, words, 500, 0.1);
+
+    ASSERT_DURATION_MILLISECONDS(1000);
+    int words_count = 0;
+    for (size_t i = 0; i < max_id; ++i) {
+        const auto [words, status] = server.MatchDocument(execution::par, query, i);
+        //cout << words.size() << endl;
+        //words_count += words.size();
+    }
+    //cout << words_count << endl;
+}
+
 // --------- Окончание модульных тестов поисковой системы -----------
 
 // Функция TestSearchServer является точкой входа для запуска тестов
@@ -976,5 +1000,6 @@ void TestSearchServer() {
 
 #ifndef _DEBUG
     RUN_TEST(TestRemoveDocumentSpeed);
+    RUN_TEST(TestMatchDocumentSpeed);
 #endif
 }

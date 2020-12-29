@@ -42,7 +42,7 @@ tuple<vector<string>, DocumentStatus> SearchServer::MatchDocument(const string& 
     Query query = ParseQuery(raw_query, true);
     vector<string> words;
     if (!HasMinusWord(query.minus_words, document_id)) {
-        for (auto& word : query.plus_words) {
+        for (const string& word : query.plus_words) {
             if (word_to_document_freqs_.count(word) == 0 ||
                 word_to_document_freqs_.at(word).count(document_id) == 0) {
                 continue;
@@ -50,6 +50,33 @@ tuple<vector<string>, DocumentStatus> SearchServer::MatchDocument(const string& 
             words.push_back(word);
         }
         sort(words.begin(), words.end());
+    }
+
+    return { words, document_data_.at(document_id).status };
+}
+
+tuple<vector<string>, DocumentStatus> SearchServer::MatchDocument(const execution::sequenced_policy&, const string& raw_query, int document_id) const
+{
+    return MatchDocument(raw_query, document_id);
+}
+
+tuple<vector<string>, DocumentStatus> SearchServer::MatchDocument(const execution::parallel_policy&, const string& raw_query, int document_id) const
+{
+    Query query = ParseQuery(raw_query, true);
+
+    vector<string> words;
+    if (!HasMinusWord(query.minus_words, document_id)) {
+        words.reserve(query.plus_words.size() + 1);
+
+        for_each(execution::par, query.plus_words.begin(), query.plus_words.end(),
+            [this, &words, &document_id](const string& word) {
+                if (word_to_document_freqs_.count(word) != 0 &&
+                    word_to_document_freqs_.at(word).count(document_id) != 0) {
+                    words.push_back(word);
+                }
+            });
+
+        sort(execution::par, words.begin(), words.end());
     }
 
     return { words, document_data_.at(document_id).status };
@@ -205,7 +232,7 @@ vector<string> SearchServer::SplitIntoWordsNoStop(const string& text) const {
     return words;
 }
 
-bool SearchServer::HasMinusWord(const set<string> minus_words, const int document_id) const {
+bool SearchServer::HasMinusWord(const unordered_set<string> minus_words, const int document_id) const {
     return find_if(minus_words.begin(), minus_words.end(),
         [this, document_id](const string& word) {
             return word_to_document_freqs_.count(word) &&

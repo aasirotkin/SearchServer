@@ -10,6 +10,7 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <unordered_set>
 
 class SearchServer {
 public:
@@ -24,6 +25,8 @@ public:
     void AddDocument(int document_id, const std::string& document, DocumentStatus status, const std::vector<int>& ratings);
 
     std::tuple<std::vector<std::string>, DocumentStatus> MatchDocument(const std::string& raw_query, int document_id) const;
+    std::tuple<std::vector<std::string>, DocumentStatus> MatchDocument(const std::execution::sequenced_policy&, const std::string& raw_query, int document_id) const;
+    std::tuple<std::vector<std::string>, DocumentStatus> MatchDocument(const std::execution::parallel_policy&, const std::string& raw_query, int document_id) const;
 
     template<typename DocumentPredicate>
     std::vector<Document> FindTopDocuments(const std::string& raw_query, const DocumentPredicate& predicate) const;
@@ -54,8 +57,8 @@ private:
     };
 
     struct Query {
-        std::set<std::string> plus_words;
-        std::set<std::string> minus_words;
+        std::unordered_set<std::string> plus_words;
+        std::unordered_set<std::string> minus_words;
     };
 
 private:
@@ -75,7 +78,7 @@ private:
     template<typename StringCollection>
     std::set<std::string> MakeUniqueNonEmptyStringCollection(const StringCollection& collection) const;
 
-    bool HasMinusWord(const std::set<std::string> minus_words, const int document_id) const;
+    bool HasMinusWord(const std::unordered_set<std::string> minus_words, const int document_id) const;
     bool IsStopWord(const std::string& word) const;
     static bool IsValidWord(const std::string& word);
     static bool IsValidMinusWord(const std::string& word);
