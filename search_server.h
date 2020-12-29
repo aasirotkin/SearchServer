@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 #include <unordered_set>
+#include <utility>
 
 class SearchServer {
 public:
@@ -21,24 +22,25 @@ public:
     template<typename StopWordsCollection>
     explicit SearchServer(const StopWordsCollection& stop_words);
     explicit SearchServer(const std::string& stop_words);
+    explicit SearchServer(const std::string_view& stop_words);
 
-    void AddDocument(int document_id, const std::string& document, DocumentStatus status, const std::vector<int>& ratings);
+    void AddDocument(int document_id, const std::string_view& document, DocumentStatus status, const std::vector<int>& ratings);
 
-    std::tuple<std::vector<std::string>, DocumentStatus> MatchDocument(const std::string& raw_query, int document_id) const;
-    std::tuple<std::vector<std::string>, DocumentStatus> MatchDocument(const std::execution::sequenced_policy&, const std::string& raw_query, int document_id) const;
-    std::tuple<std::vector<std::string>, DocumentStatus> MatchDocument(const std::execution::parallel_policy&, const std::string& raw_query, int document_id) const;
+    std::tuple<std::vector<std::string_view>, DocumentStatus> MatchDocument(const std::string_view& raw_query, int document_id) const;
+    std::tuple<std::vector<std::string_view>, DocumentStatus> MatchDocument(const std::execution::sequenced_policy&, const std::string_view& raw_query, int document_id) const;
+    std::tuple<std::vector<std::string_view>, DocumentStatus> MatchDocument(const std::execution::parallel_policy&, const std::string_view& raw_query, int document_id) const;
 
     template<typename DocumentPredicate>
-    std::vector<Document> FindTopDocuments(const std::string& raw_query, const DocumentPredicate& predicate) const;
-    std::vector<Document> FindTopDocuments(const std::string& raw_query, const DocumentStatus status) const;
-    std::vector<Document> FindTopDocuments(const std::string& raw_query) const;
+    std::vector<Document> FindTopDocuments(const std::string_view& raw_query, const DocumentPredicate& predicate) const;
+    std::vector<Document> FindTopDocuments(const std::string_view& raw_query, const DocumentStatus status) const;
+    std::vector<Document> FindTopDocuments(const std::string_view& raw_query) const;
 
     void RemoveDocument(int document_id);
     void RemoveDocument(const std::execution::sequenced_policy&, int document_id);
     void RemoveDocument(const std::execution::parallel_policy&, int document_id);
 
     int GetDocumentCount() const;
-    const std::map<std::string, double>& GetWordFrequencies(int document_id) const;
+    const std::map<std::string_view, double>& GetWordFrequencies(int document_id) const;
     std::string GetStopWords() const;
 
     const std::set<int>::const_iterator begin() const {
@@ -51,41 +53,44 @@ public:
 
 private:
     struct QueryWord {
-        std::string data;
+        std::string_view data;
         bool is_minus;
         bool is_stop;
     };
 
     struct Query {
-        std::unordered_set<std::string> plus_words;
-        std::unordered_set<std::string> minus_words;
+        std::unordered_set<std::string_view> plus_words;
+        std::unordered_set<std::string_view> minus_words;
     };
 
 private:
     template<typename DocumentPredicate>
     std::vector<Document> FindAllDocuments(const Query& query, const DocumentPredicate& predicate) const;
 
-    QueryWord ParseQueryWord(std::string text) const;
-    Query ParseQuery(const std::string& text, const bool all_words = false) const;
+    QueryWord ParseQueryWord(std::string_view text) const;
+    Query ParseQuery(const std::string_view& text, const bool all_words = false) const;
 
     // Existence required
-    double ComputeWordInverseDocumentFreq(const std::string& word) const;
+    double ComputeWordInverseDocumentFreq(const std::string_view& word) const;
     static int ComputeAverageRating(const std::vector<int>& ratings);
 
     std::vector<std::string> SplitIntoWords(const std::string& text) const;
+    std::vector<std::string_view> SplitStringViewIntoWords(std::string_view text) const;
     std::vector<std::string> SplitIntoWordsNoStop(const std::string& text) const;
+    std::vector<std::string_view> SplitStringViewIntoWordsNoStop(const std::string_view& text) const;
 
     template<typename StringCollection>
-    std::set<std::string> MakeUniqueNonEmptyStringCollection(const StringCollection& collection) const;
+    std::set<std::string, std::less<>> MakeUniqueNonEmptyStringCollection(const StringCollection& collection) const;
 
-    bool HasMinusWord(const std::unordered_set<std::string> minus_words, const int document_id) const;
-    bool IsStopWord(const std::string& word) const;
-    static bool IsValidWord(const std::string& word);
-    static bool IsValidMinusWord(const std::string& word);
+    bool HasMinusWord(const std::unordered_set<std::string_view> minus_words, const int document_id) const;
+    bool IsStopWord(const std::string_view& word) const;
+    static bool IsValidWord(const std::string_view& word);
+    static bool IsValidMinusWord(const std::string_view& word);
 
 private:
-    std::set<std::string> stop_words_;
-    std::map<std::string, std::map<int, double>> word_to_document_freqs_;
+    std::unordered_set<std::string> words_to_documents_;
+    std::set<std::string, std::less<>> stop_words_;
+    std::map<std::string_view, std::map<int, double>> word_to_document_freqs_;
     std::map<int, DocumentData> document_data_;
     std::set<int> document_ids_;
 };
@@ -96,7 +101,7 @@ SearchServer::SearchServer(const StopWordsCollection& stop_words) :
 }
 
 template<typename DocumentPredicate>
-std::vector<Document> SearchServer::FindTopDocuments(const std::string& raw_query, const DocumentPredicate& predicate) const {
+std::vector<Document> SearchServer::FindTopDocuments(const std::string_view& raw_query, const DocumentPredicate& predicate) const {
     Query query = ParseQuery(raw_query);
 
     std::vector<Document> result = FindAllDocuments(query, predicate);
@@ -115,7 +120,7 @@ std::vector<Document> SearchServer::FindTopDocuments(const std::string& raw_quer
 template<typename DocumentPredicate>
 std::vector<Document> SearchServer::FindAllDocuments(const Query& query, const DocumentPredicate& predicate) const {
     std::map<int, double> document_to_relevance;
-    for (const std::string& word : query.plus_words) {
+    for (const std::string_view& word : query.plus_words) {
         if (word_to_document_freqs_.count(word) == 0 ||
             word_to_document_freqs_.at(word).size() == 0) {
             continue;
@@ -129,7 +134,7 @@ std::vector<Document> SearchServer::FindAllDocuments(const Query& query, const D
         }
     }
 
-    for (const std::string& word : query.minus_words) {
+    for (const std::string_view& word : query.minus_words) {
         if (word_to_document_freqs_.count(word) == 0) {
             continue;
         }
@@ -150,14 +155,14 @@ std::vector<Document> SearchServer::FindAllDocuments(const Query& query, const D
 }
 
 template<typename StringCollection>
-std::set<std::string> SearchServer::MakeUniqueNonEmptyStringCollection(const StringCollection& collection) const {
-    std::set<std::string> strings;
-    for (const std::string& word : collection) {
+std::set<std::string, std::less<>> SearchServer::MakeUniqueNonEmptyStringCollection(const StringCollection& collection) const {
+    std::set<std::string, std::less<>> strings;
+    for (const std::string_view& word : collection) {
         if (!IsValidWord(word)) {
             throw std::invalid_argument(std::string("Words can't contain special characters"));
         }
         if (!word.empty()) {
-            strings.insert(word);
+            strings.insert(std::string(word));
         }
     }
     return strings;

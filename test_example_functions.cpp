@@ -282,13 +282,15 @@ void TestMinusWords() {
 void TestMatchDocumentStatus(const SearchServer& server, const int id,
                              const DocumentStatus status) {
     { // Убедимся, что при наличии минус слова ничего найдено не будет
-        const auto [words, status_out] = server.MatchDocument("cat -city"s, id);
+        string query("cat -city");
+        const auto [words, status_out] = server.MatchDocument(query, id);
         ASSERT_HINT(words.empty(), "Query contains minus word"s);
         ASSERT_HINT(status_out == status, "Status must be correct"s);
     }
 
     { // Убедимся, что наличие минус слова, которого нет в документе, не повлияет на результат
-        const auto [words, status_out] = server.MatchDocument("cat city -fake"s, id);
+        string query("cat city -fake");
+        const auto [words, status_out] = server.MatchDocument(query, id);
         ASSERT_EQUAL(words.size(), size_t(2));
         // Здесь проверяется лексикографический порядок слова
         ASSERT_EQUAL_HINT(words.at(0), "cat"s, "Words order must be lexicographical"s);
@@ -297,7 +299,8 @@ void TestMatchDocumentStatus(const SearchServer& server, const int id,
     }
 
     { // Убедимся, что знак минус между словами не считается минус словом
-        const auto [words, status_out] = server.MatchDocument("cat in the big-city"s, id);
+        string query("cat in the big-city");
+        const auto [words, status_out] = server.MatchDocument(query, id);
         ASSERT_EQUAL(words.size(), size_t(3));
         ASSERT_HINT(status_out == status, "Status must be correct"s);
     }
@@ -551,7 +554,7 @@ void TestGetWordFrequencies() {
     ASSERT_HINT(server.GetWordFrequencies(0).empty(), "Server doesn't has id = 0, result must be empty"s);
 
     {
-        map<string, double> word_frequency_id_5 = server.GetWordFrequencies(5);
+        map<string_view, double> word_frequency_id_5 = server.GetWordFrequencies(5);
 
         ASSERT_EQUAL_HINT(word_frequency_id_5.size(), size_t(3), "Document with id = 5 has 3 words"s);
 
@@ -566,7 +569,7 @@ void TestGetWordFrequencies() {
     }
 
     {
-        map<string, double> word_frequency_id_10 = server.GetWordFrequencies(10);
+        map<string_view, double> word_frequency_id_10 = server.GetWordFrequencies(10);
 
         ASSERT_EQUAL_HINT(word_frequency_id_10.size(), size_t(7), "Document with id = 10 has 7 unique words"s);
 

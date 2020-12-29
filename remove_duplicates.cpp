@@ -7,7 +7,7 @@
 
 using namespace std;
 
-bool IsDuplicate(const map<string, double>& lhs, const map<string, double>& rhs) {
+bool IsDuplicate(const map<string_view, double>& lhs, const map<string_view, double>& rhs) {
     if (lhs.size() != rhs.size()) {
         return false;
     }
@@ -24,11 +24,11 @@ vector<int> FindDuplicateIds(const SearchServer& search_server) {
     for (auto it_i = search_server.begin(); it_i != search_server.end(); ++it_i) {
         const int lhs_id = *it_i;
         if (count(ids_to_delete.begin(), ids_to_delete.end(), lhs_id) == 0) {
-            const map<string, double>& lhs = search_server.GetWordFrequencies(lhs_id);
+            const map<string_view, double>& lhs = search_server.GetWordFrequencies(lhs_id);
 
             for (auto it_j = next(it_i, 1); it_j != search_server.end(); ++it_j) {
                 const int rhs_id = *it_j;
-                const map<string, double>& rhs = search_server.GetWordFrequencies(rhs_id);
+                const map<string_view, double>& rhs = search_server.GetWordFrequencies(rhs_id);
 
                 if (IsDuplicate(lhs, rhs)) {
                     ids_to_delete.push_back(rhs_id);

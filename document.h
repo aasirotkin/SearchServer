@@ -3,6 +3,7 @@
 #include <iostream>
 #include <map>
 #include <string>
+#include <string_view>
 #include <vector>
 
 enum class DocumentStatus
@@ -17,7 +18,7 @@ struct DocumentData
 {
     int rating;
     DocumentStatus status;
-    std::map<std::string, double> word_frequency;
+    std::map<std::string_view, double> word_frequency;
 };
 
 struct Document {
@@ -36,6 +37,6 @@ struct Document {
 
 void PrintDocument(const Document& document);
 
-void PrintMatchDocumentResult(int document_id, const std::vector<std::string>& words, DocumentStatus status);
+void PrintMatchDocumentResult(int document_id, const std::vector<std::string_view>& words, DocumentStatus status);
 
 std::ostream& operator<< (std::ostream& out, const Document& doc);
