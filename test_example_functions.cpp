@@ -441,7 +441,7 @@ void TestFilterPredicate() {
     }
 
     { // Проверяем что можно найти только документы с положительным рейтингом
-        const auto docs = server.FindTopDocuments(content,
+        const auto docs = server.FindTopDocuments(execution::par, content,
             [](int document_id, DocumentStatus st, int rating) {
                 (void)document_id; (void)st; return rating > 0;});
         ASSERT_EQUAL_HINT(docs.size(), size_t(2), "There is only two documents with positive rating"s);
@@ -523,6 +523,7 @@ void TestRelevanceValue() {
     ASSERT_EQUAL_HINT(server.GetDocumentCount(), 6, "Only 6 documents have been added"s);
 
     const auto docs = server.FindTopDocuments(query, status);
+
     ASSERT_EQUAL_HINT(docs.size(), size_t(4), "Not all of the documents have words from the query"s);
 
     ASSERT(InTheVicinity(docs.at(0).relevance, 0.3465735, delta));
@@ -536,6 +537,9 @@ void TestRelevanceValue() {
 
     ASSERT(InTheVicinity(docs.at(3).relevance, 0.1155245, delta));
     ASSERT_EQUAL(docs.at(3).id, 2);
+
+    const auto par_docs = server.FindTopDocuments(query, status);
+    ASSERT_HINT(par_docs == docs, "Parallel method must be give the same result"s);
 }
 
 // Проверка метода возврата частот
@@ -978,6 +982,26 @@ void TestMatchDocumentSpeed() {
     //cout << words_count << endl;
 }
 
+// Проверка скорости метода поиска 'верхних' документов
+void TestFindTopDocumentsSpeed() {
+    mt19937 generator;
+    vector<string> words = GenerateWords(generator, 1'000, 10);
+    vector<string> phrases = GeneratePhrases(generator, words, 10'000, 70);
+
+    SearchServer server;
+    size_t max_id = phrases.size();
+    for (size_t i = 0; i < max_id; ++i) {
+        server.AddDocument(i, phrases.at(i), DocumentStatus::ACTUAL, { 1, 2, 3 });
+    }
+
+    vector<string> queries = GeneratePhrases(generator, words, 100, 70);
+
+    ASSERT_DURATION_MILLISECONDS(1000);
+    for (const string_view query : queries) {
+        server.FindTopDocuments(execution::par, query);
+    }
+}
+
 // --------- Окончание модульных тестов поисковой системы -----------
 
 // Функция TestSearchServer является точкой входа для запуска тестов
@@ -1004,5 +1028,6 @@ void TestSearchServer() {
 #ifndef _DEBUG
     RUN_TEST(TestRemoveDocumentSpeed);
     RUN_TEST(TestMatchDocumentSpeed);
+    RUN_TEST(TestFindTopDocumentsSpeed);
 #endif
 }

@@ -98,6 +98,24 @@ vector<Document> SearchServer::FindTopDocuments(const string_view& raw_query) co
     return FindTopDocuments(raw_query, DocumentStatus::ACTUAL);
 }
 
+vector<Document> SearchServer::FindTopDocuments(const execution::sequenced_policy&, const string_view& raw_query, const DocumentStatus status) const {
+    return FindTopDocuments(raw_query,
+        [status](int document_id, DocumentStatus st, int rating) { (void)document_id; (void)rating; return status == st; });
+}
+
+vector<Document> SearchServer::FindTopDocuments(const execution::sequenced_policy&, const string_view& raw_query) const {
+    return FindTopDocuments(raw_query, DocumentStatus::ACTUAL);
+}
+
+vector<Document> SearchServer::FindTopDocuments(const execution::parallel_policy&, const string_view& raw_query, const DocumentStatus status) const {
+    return FindTopDocuments(execution::par, raw_query,
+        [status](int document_id, DocumentStatus st, int rating) { (void)document_id; (void)rating; return status == st; });
+}
+
+vector<Document> SearchServer::FindTopDocuments(const execution::parallel_policy&, const string_view& raw_query) const {
+    return FindTopDocuments(execution::par, raw_query, DocumentStatus::ACTUAL);
+}
+
 void SearchServer::RemoveDocument(int document_id)
 {
     if (document_ids_.count(document_id)) {

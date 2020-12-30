@@ -35,6 +35,10 @@ struct Document {
     static bool CompareRelevance(const Document& lhs, const Document& rhs);
 };
 
+inline bool operator== (const Document& lhv, const Document& rhv) {
+    return (lhv.id == rhv.id && lhv.relevance == rhv.relevance && lhv.rating == rhv.rating);
+}
+
 void PrintDocument(const Document& document);
 
 void PrintMatchDocumentResult(int document_id, const std::vector<std::string_view>& words, DocumentStatus status);
