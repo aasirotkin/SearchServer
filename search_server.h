@@ -74,15 +74,13 @@ private:
     double ComputeWordInverseDocumentFreq(const std::string_view& word) const;
     static int ComputeAverageRating(const std::vector<int>& ratings);
 
-    std::vector<std::string> SplitIntoWords(const std::string& text) const;
-    std::vector<std::string_view> SplitStringViewIntoWords(std::string_view text) const;
-    std::vector<std::string> SplitIntoWordsNoStop(const std::string& text) const;
-    std::vector<std::string_view> SplitStringViewIntoWordsNoStop(const std::string_view& text) const;
+    std::vector<std::string_view> SplitIntoWords(std::string_view text) const;
+    std::vector<std::string_view> SplitIntoWordsNoStop(const std::string_view& text) const;
 
     template<typename StringCollection>
     std::set<std::string, std::less<>> MakeUniqueNonEmptyStringCollection(const StringCollection& collection) const;
 
-    bool HasMinusWord(const std::unordered_set<std::string_view> minus_words, const int document_id) const;
+    bool HasMinusWord(const std::unordered_set<std::string_view>& minus_words, const int document_id) const;
     bool IsStopWord(const std::string_view& word) const;
     static bool IsValidWord(const std::string_view& word);
     static bool IsValidMinusWord(const std::string_view& word);

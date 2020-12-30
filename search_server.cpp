@@ -6,11 +6,11 @@
 using namespace std;
 
 SearchServer::SearchServer(const std::string& stop_words) :
-    SearchServer(SplitIntoWords(stop_words)) {
+    SearchServer(string_view(stop_words)) {
 }
 
 SearchServer::SearchServer(const std::string_view& stop_words) :
-    SearchServer(SplitStringViewIntoWords(stop_words)) {
+    SearchServer(SplitIntoWords(stop_words)) {
 }
 
 void SearchServer::AddDocument(int document_id, const string_view& document, DocumentStatus status, const vector<int>& ratings) {
@@ -22,7 +22,7 @@ void SearchServer::AddDocument(int document_id, const string_view& document, Doc
         throw invalid_argument("Document with id = "s + to_string(document_id) + "already exists"s);
     }
 
-    vector<string_view> words = SplitStringViewIntoWordsNoStop(document);
+    vector<string_view> words = SplitIntoWordsNoStop(document);
     map<string_view, double> word_frequency;
 
     const double inv_word_count = 1.0 / words.size();
@@ -180,7 +180,7 @@ SearchServer::QueryWord SearchServer::ParseQueryWord(string_view text) const {
 SearchServer::Query SearchServer::ParseQuery(const string_view& text, const bool all_words) const
 {
     Query query;
-    for (const string_view& word : SplitStringViewIntoWords(text)) {
+    for (const string_view& word : SplitIntoWords(text)) {
         QueryWord query_word = ParseQueryWord(word);
         if (!query_word.is_stop || all_words) {
             if (query_word.is_minus) {
@@ -204,29 +204,7 @@ int SearchServer::ComputeAverageRating(const vector<int>& ratings) {
         : 0;
 }
 
-vector<string> SearchServer::SplitIntoWords(const string& text) const
-{
-    vector<string> words;
-    string word;
-    for (const char c : text) {
-        if (c == ' ') {
-            if (!word.empty()) {
-                words.push_back(word);
-                word.clear();
-            }
-        }
-        else {
-            word += c;
-        }
-    }
-    if (!word.empty()) {
-        words.push_back(word);
-    }
-
-    return words;
-}
-
-vector<string_view> SearchServer::SplitStringViewIntoWords(string_view text) const
+vector<string_view> SearchServer::SplitIntoWords(string_view text) const
 {
     vector<string_view> words;
     while (true) {
@@ -241,24 +219,10 @@ vector<string_view> SearchServer::SplitStringViewIntoWords(string_view text) con
     return words;
 }
 
-std::vector<std::string> SearchServer::SplitIntoWordsNoStop(const std::string& text) const
-{
-    std::vector<std::string> words;
-    for (const std::string& word : SplitIntoWords(text)) {
-        if (!IsValidWord(word)) {
-            throw std::invalid_argument("The word = "s + word + " contains special symbol"s);
-        }
-        if (!IsStopWord(word)) {
-            words.push_back(word);
-        }
-    }
-    return words;
-}
-
-vector<string_view> SearchServer::SplitStringViewIntoWordsNoStop(const string_view& text) const
+std::vector<std::string_view> SearchServer::SplitIntoWordsNoStop(const std::string_view& text) const
 {
     std::vector<std::string_view> words;
-    for (const std::string_view& word : SplitStringViewIntoWords(text)) {
+    for (const std::string_view& word : SplitIntoWords(text)) {
         if (!IsValidWord(word)) {
             throw std::invalid_argument("The word = "s + string(word) + " contains special symbol"s);
         }
@@ -269,7 +233,7 @@ vector<string_view> SearchServer::SplitStringViewIntoWordsNoStop(const string_vi
     return words;
 }
 
-bool SearchServer::HasMinusWord(const unordered_set<string_view> minus_words, const int document_id) const {
+bool SearchServer::HasMinusWord(const unordered_set<string_view>& minus_words, const int document_id) const {
     return find_if(minus_words.begin(), minus_words.end(),
         [this, document_id](const string_view& word) {
             return word_to_document_freqs_.count(word) &&
