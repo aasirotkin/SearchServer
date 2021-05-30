@@ -11,3 +11,4 @@ release/
 *.vcxproj
 *.vcxproj.filters
 *.vcxproj.user
+out/
